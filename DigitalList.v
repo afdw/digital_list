@@ -155,23 +155,29 @@ Compute sized_list_rev [|1; 2; 3; 4; 5|].
 End Example.
 
 Lemma sized_list_rev_inner_correct :
-  forall {A n1 n2} default (sl1 : sized_list A n1) (sl2 : sized_list A n2),
-  sized_list_rev_inner sl1 sl2 =
-  sized_list_of_list default (List.rev (sized_list_to_list sl1) ++ sized_list_to_list sl2).
+  forall {A n1 n2} (sl1 : sized_list A n1) (sl2 : sized_list A n2),
+  sized_list_to_list (sized_list_rev_inner sl1 sl2) =
+    List.rev (sized_list_to_list sl1) ++ sized_list_to_list sl2.
 Proof.
   intros ? ? ? ? ?. generalize dependent n2. induction sl1; intros ? ?.
-  - simpl. symmetry. apply sized_list_of_to_list_correct.
-  - simpl. rewrite IHsl1. remember (List.rev (sized_list_to_list sl1)) as l0. destruct l0.
-    + simpl. rewrite <- sized_list_of_list_cons. unrew. auto.
-    + simpl. rewrite <- sized_list_of_list_cons. rewrite <- List.app_assoc. unrew. auto.
+  - auto.
+  - simpl. unrew. rewrite IHsl1; clear IHsl1. simpl. rewrite <- List.app_assoc. auto.
 Qed.
 
 Theorem sized_list_rev_correct :
+  forall {A n} (sl : sized_list A n),
+  sized_list_to_list (sized_list_rev sl) = List.rev (sized_list_to_list sl).
+Proof.
+  intros ? ? ?. unfold sized_list_rev. unrew. rewrite sized_list_rev_inner_correct.
+  simpl. rewrite List.app_nil_r. auto.
+Qed.
+
+Theorem sized_list_rev_correct_eq :
   forall {A n} default (sl : sized_list A n),
   sized_list_rev sl = sized_list_of_list default (List.rev (sized_list_to_list sl)).
 Proof.
-  intros ? ? ? ?. unfold sized_list_rev. unrew. rewrite (sized_list_rev_inner_correct default).
-  simpl. rewrite List.app_nil_r. auto.
+  intros ? ? ? ?. rewrite <- (sized_list_of_to_list_correct default) at 1. f_equal.
+  apply sized_list_rev_correct.
 Qed.
 
 Fixpoint sized_list_pop {A n} (sl : sized_list A (S n)) : sized_list A n :=
@@ -267,12 +273,11 @@ Fixpoint complete_leaf_tree_nth {A n d} (isl : sized_list nat d) (clt : complete
   | 0 => fun (isl : sized_list nat 0) (clt : complete_leaf_tree A n 0) =>
     Some (clt : A)
   | S d' => fun (isl : sized_list nat (S d')) (clt : complete_leaf_tree A n (S d')) =>
-    let d := S d' in let Heqd : d = S d' := eq_refl in
     match isl with
     | @SizedListCons _ d'0 i isl'0 => fun (Heqd : S d'0 = S d') =>
-      let isl' := rew dependent (eq_add_S _ _ Heqd) in isl'0 in
+      let isl' := rew (eq_add_S _ _ Heqd) in isl'0 in
       option_flat_map (complete_leaf_tree_nth isl') (sized_list_nth i clt)
-    end Heqd
+    end eq_refl
   end isl clt.
 
 Section Example.
@@ -413,7 +418,7 @@ Lemma indexes_sized_list_to_index_sized_list_rev_cons :
   indexes_sized_list_to_index n (sized_list_rev (i :||: isl)) =
   indexes_sized_list_to_index n (sized_list_rev isl) * n + i.
 Proof.
-  intros ? ? ? ?. rewrite ? (sized_list_rev_correct 0).
+  intros ? ? ? ?. rewrite ? (sized_list_rev_correct_eq 0).
   remember (sized_list_to_list (i :||: isl)) as l0. simpl in Heql0. subst l0.
   assert (forall l, List.rev (i :: l) = List.rev l ++ [i]) by auto. rewrite H. clear H.
   remember (List.rev (sized_list_to_list isl)) as l0.
@@ -467,14 +472,13 @@ Fixpoint digital_list_nth_inner {A n d} (isl : sized_list nat d) (dl : digital_l
   | DigitalListNil => fun (isl : sized_list nat 0) =>
     None
   | @DigitalListCons _ _ d' k _ sl dl' => fun (isl : sized_list nat (S d')) =>
-    let d := S d' in let Heqd : d = S d' := eq_refl in
     match isl with
     | @SizedListCons _ d'0 i isl'0 => fun (Heqd : S d'0 = S d') =>
-      let isl' := rew dependent (eq_add_S _ _ Heqd) in isl'0 in
+      let isl' := rew (eq_add_S _ _ Heqd) in isl'0 in
       if Nat.eqb i k
       then digital_list_nth_inner isl' dl'
       else option_flat_map (complete_leaf_tree_nth isl') (sized_list_nth i sl)
-    end Heqd
+    end eq_refl
   end isl.
 
 Definition digital_list_nth {A n d} (i : nat) (dl : digital_list A n d) : option A :=
