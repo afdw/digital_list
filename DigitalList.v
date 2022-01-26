@@ -9,6 +9,7 @@ Abbreviations used:
 *)
 
 Require Coq.Program.Wf.
+Require Import Coq.Program.Equality.
 Require Import Lia.
 Import EqNotations.
 Require Coq.Lists.List.
@@ -51,28 +52,15 @@ Qed.
 Definition option_flat_map {A B} (f : A -> option B) (o : option A) : option B :=
   match o with
   | None => None
-  | Some a =>
-    match f a with
-    | None => None
-    | Some b => Some b
-    end
+  | Some a => f a
   end.
-
-Theorem option_flat_map_some :
-  forall {A B} (f : A -> option B) a,
-  option_flat_map f (Some a) = f a.
-Proof.
-  intros ? ? ? ?. simpl. destruct (f a); auto.
-Qed.
 
 Theorem option_flat_map_ext :
   forall {A B} (f g : A -> option B) o,
   (forall a, f a = g a) ->
   option_flat_map f o = option_flat_map g o.
 Proof.
-  intros ? ? ? ? ? ?. destruct o.
-  - simpl. rewrite H. auto.
-  - auto.
+  intros ? ? ? ? ? ?. destruct o; simpl; auto.
 Qed.
 
 Inductive sized_list {A} : nat -> Type :=
@@ -201,6 +189,25 @@ Theorem sized_list_rev_correct_eq :
 Proof.
   intros ? ? ? ?. rewrite <- (sized_list_of_to_list_correct default) at 1. f_equal.
   apply sized_list_rev_correct.
+Qed.
+
+Lemma sized_list_forall_sized_list_rev_inner :
+  forall {A n1 n2} f (sl1 : sized_list A n1) (sl2 : sized_list A n2),
+  sized_list_forall f sl1 ->
+  sized_list_forall f sl2 ->
+  sized_list_forall f (sized_list_rev_inner sl1 sl2).
+Proof.
+  intros ? ? ? ? ? ?. generalize dependent n2. induction sl1; intros ? ? ? ?.
+  - auto.
+  - simpl. unrew. inversion H; clear H. apply IHsl1; simpl; auto.
+Qed.
+
+Theorem sized_list_forall_sized_list_rev :
+  forall {A n} f (sl : sized_list A n),
+  sized_list_forall f sl ->
+  sized_list_forall f (sized_list_rev sl).
+Proof.
+  intros ? ? ? ? ?. unfold sized_list_rev. unrew. apply sized_list_forall_sized_list_rev_inner; simpl; auto.
 Qed.
 
 Fixpoint sized_list_pop {A n} (sl : sized_list A (S n)) : sized_list A n :=
@@ -409,6 +416,15 @@ Proof.
   intros ? ? ?. destruct cdl as (d & dl). apply digital_list_length_correct.
 Qed.
 
+Theorem digital_list_length_upper_bound :
+  forall {A n d} (dl : digital_list A n d),
+  digital_list_length dl < Nat.pow n d.
+Proof.
+  intros ? ? ? ?. induction dl.
+  - auto.
+  - simpl. nia.
+Qed.
+
 #[program] Fixpoint to_digits n m {measure m} :=
   match n, m with
   | _, 0 => []
@@ -514,7 +530,24 @@ Proof.
       symmetry. rewrite PeanoNat.Nat.mul_comm. apply PeanoNat.Nat.div_mod_eq.
 Qed.
 
-Theorem indexes_sized_list_to_index_upper_bounded :
+Theorem indexes_sized_list_of_index_upper_bound :
+  forall {k} n m,
+  n > 1 ->
+  sized_list_forall (fun i => i < n) (indexes_sized_list_of_index (k := k) n m).
+Proof.
+  intros ? ? ? ?. unfold indexes_sized_list_of_index. apply sized_list_forall_sized_list_rev.
+  generalize dependent m. induction k; intros ?.
+  - simpl. auto.
+  - simpl. destruct (PeanoNat.Nat.eqb_spec m 0).
+    + clear IHk. subst m. rewrite to_digits_red_any_zero. simpl. split; try lia. induction k.
+      * simpl. auto.
+      * simpl. intuition lia.
+    + rewrite to_digits_red_any_nonzero; try lia. simpl. split.
+      * apply PeanoNat.Nat.mod_upper_bound. lia.
+      * auto.
+Qed.
+
+Theorem indexes_sized_list_to_index_upper_bound :
   forall {n d} (isl : sized_list nat d),
   sized_list_forall (fun i => i < n) isl ->
   indexes_sized_list_to_index n isl < Nat.pow n d.
@@ -558,10 +591,11 @@ Proof.
       rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_nth_error_constant_length_for_type.
       * rewrite sized_list_nth_correct. apply option_flat_map_ext. intros clt'. apply IHd. auto.
       * apply complete_leaf_tree_to_list_length.
-      * apply indexes_sized_list_to_index_upper_bounded. auto.
+      * apply indexes_sized_list_to_index_upper_bound. auto.
 Qed.
 
-Fixpoint digital_list_nth_inner {A n d} (isl : sized_list nat d) (dl : digital_list A n d) : option A :=
+Fixpoint digital_list_nth_inner {A n d} (isl : sized_list nat d) (dl : digital_list A n d)
+  {struct dl} : option A :=
   match dl with
   | DigitalListNil => fun (isl : sized_list nat 0) =>
     None
@@ -582,6 +616,65 @@ Definition digital_list_nth {A n d} (i : nat) (dl : digital_list A n d) : option
 
 Definition concrete_digital_list_nth {A n} (i : nat) (cdl : concrete_digital_list A n) : option A :=
   let '(ConcreteDigitalList _ dl) := cdl in digital_list_nth i dl.
+
+Theorem digital_list_nth_inner_correct :
+  forall {A n d} (isl : sized_list nat d) (dl : digital_list A n d),
+  sized_list_forall (fun i => i < n) isl ->
+  indexes_sized_list_to_index n isl < digital_list_length dl ->
+  digital_list_nth_inner isl dl =
+    List.nth_error (digital_list_to_list dl) (indexes_sized_list_to_index n isl).
+Proof.
+  intros ? ? ? ? ? ? ?. induction dl.
+  - simpl. symmetry. apply nth_error_nil.
+  - rename s into sl. simpl. dependent destruction isl. rename n1 into i.
+    unrew. destruct H as (? & ?). simpl in H0.
+    assert (length (List.flat_map complete_leaf_tree_to_list (sized_list_to_list sl)) = Nat.pow n d * k). {
+      rewrite (flat_map_length_constant_length_for_type _ _ (Nat.pow n d)).
+      - rewrite sized_list_to_list_length. lia.
+      - apply complete_leaf_tree_to_list_length.
+    }
+    destruct (PeanoNat.Nat.eqb_spec i k).
+    + subst i. rewrite IHdl; auto; try nia; clear IHdl. simpl. rewrite List.nth_error_app2.
+      * f_equal. rewrite H2. lia.
+      * rewrite H2. lia.
+    + clear IHdl. simpl.
+      rewrite List.nth_error_app1.
+      * rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_nth_error_constant_length_for_type.
+        -- rewrite <- sized_list_nth_correct. apply option_flat_map_ext. intros clt.
+           apply complete_leaf_tree_nth_correct. auto.
+        -- apply complete_leaf_tree_to_list_length.
+        -- apply indexes_sized_list_to_index_upper_bound. auto.
+      * specialize (indexes_sized_list_to_index_upper_bound isl H1) as ?.
+        specialize (digital_list_length_upper_bound dl) as ?.
+        rewrite H2. nia.
+Qed.
+
+Theorem digital_list_nth_correct :
+  forall {A n d} i (dl : digital_list A n d),
+  n > 1 ->
+  digital_list_nth i dl = List.nth_error (digital_list_to_list dl) i.
+Proof.
+  intros ? ? ? ? ? ?. unfold digital_list_nth. destruct (PeanoNat.Nat.ltb_spec0 i (digital_list_length dl)).
+  - assert (indexes_sized_list_to_index (k := d) n (indexes_sized_list_of_index n i) = i). {
+      apply indexes_sized_list_to_of_correct.
+      - auto.
+      - apply (PeanoNat.Nat.le_trans _ _ _ l). apply PeanoNat.Nat.lt_le_incl.
+        apply digital_list_length_upper_bound.
+    }
+    rewrite digital_list_nth_inner_correct.
+    + rewrite H0. auto.
+    + apply indexes_sized_list_of_index_upper_bound. auto.
+    + rewrite H0. auto.
+  - rewrite digital_list_length_correct in n0. symmetry. apply List.nth_error_None. lia.
+Qed.
+
+Theorem concrete_digital_list_nth_correct :
+  forall {A n} i (cdl : concrete_digital_list A n),
+  n > 1 ->
+  concrete_digital_list_nth i cdl = List.nth_error (concrete_digital_list_to_list cdl) i.
+Proof.
+  intros ? ? ? ? ?. destruct cdl as (d & dl). apply digital_list_nth_correct. auto.
+Qed.
 
 Section Example.
 
