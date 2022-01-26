@@ -58,6 +58,23 @@ Definition option_flat_map {A B} (f : A -> option B) (o : option A) : option B :
     end
   end.
 
+Theorem option_flat_map_some :
+  forall {A B} (f : A -> option B) a,
+  option_flat_map f (Some a) = f a.
+Proof.
+  intros ? ? ? ?. simpl. destruct (f a); auto.
+Qed.
+
+Theorem option_flat_map_ext :
+  forall {A B} (f g : A -> option B) o,
+  (forall a, f a = g a) ->
+  option_flat_map f o = option_flat_map g o.
+Proof.
+  intros ? ? ? ? ? ?. destruct o.
+  - simpl. rewrite H. auto.
+  - auto.
+Qed.
+
 Inductive sized_list {A} : nat -> Type :=
   | SizedListNil : sized_list 0
   | SizedListCons : forall {n}, A -> sized_list n -> sized_list (S n).
@@ -127,6 +144,12 @@ Theorem sized_list_of_list_cons :
 Proof.
   auto.
 Qed.
+
+Fixpoint sized_list_forall {A n} f (sl : sized_list A n) :=
+  match sl with
+  | [||] => True
+  | x :||: l' => f x /\ sized_list_forall f l'
+  end.
 
 Theorem sized_list_to_list_length :
   forall {A n} (sl : sized_list A n),
@@ -218,12 +241,38 @@ Proof.
         -- do 2 unrew. rewrite <- sized_list_to_list_cons. auto.
 Qed.
 
-Fixpoint sized_list_nth {A n} i (sl : sized_list A n) :=
+Lemma nth_error_nil : forall {A} i, List.nth_error ([] : list A) i = None.
+Proof.
+  intros ? ?. apply List.nth_error_None. simpl. lia.
+Qed.
+
+Lemma nth_error_cons :
+  forall {A} x (l : list A) i,
+  i <> 0 ->
+  List.nth_error (x :: l) i = List.nth_error l (pred i).
+Proof.
+  intros ? ? ? ? ?. destruct i.
+  - lia.
+  - auto.
+Qed.
+
+Fixpoint sized_list_nth {A n} i (sl : sized_list A n) {struct i} :=
   match sl, i with
   | [||], _ => None
   | x :||: _, 0 => Some x
   | _ :||: sl', S i' => sized_list_nth i' sl'
   end.
+
+Theorem sized_list_nth_correct :
+  forall {A n} i (sl : sized_list A n),
+  sized_list_nth i sl = List.nth_error (sized_list_to_list sl) i.
+Proof.
+  intros ? ? ? ?. generalize dependent i. induction sl; intros ?.
+  - simpl. destruct i; auto.
+  - simpl. destruct i.
+    + auto.
+    + simpl. apply IHsl.
+Qed.
 
 Fixpoint complete_leaf_tree A n d :=
   match d with
@@ -257,6 +306,22 @@ Proof.
   - simpl. rewrite List.app_length. auto.
 Qed.
 
+Lemma flat_map_nth_error_constant_length_for_type :
+  forall {A B} (f : A -> list B) l k i j,
+  (forall a, length (f a) = k) ->
+  j < k ->
+  List.nth_error (List.flat_map f l) (i * k + j) =
+  option_flat_map (fun l0 => List.nth_error (f l0) j) (List.nth_error l i).
+Proof.
+  intros ? ? ? ? ? ? ? ? ?. generalize dependent i. induction l; intros ?.
+  - simpl. do 2 rewrite nth_error_nil. auto.
+  - simpl. specialize (H a). destruct (PeanoNat.Nat.eqb_spec i 0).
+    + subst i. clear IHl. rewrite List.nth_error_app1; try lia. simpl. destruct (List.nth_error (f a) j); auto.
+    + rewrite List.nth_error_app2; try nia.
+      replace (i * k + j - length (f a)) with ((pred i) * k + j) by nia.
+      rewrite IHl; clear IHl. rewrite nth_error_cons; auto.
+Qed.
+
 Theorem complete_leaf_tree_to_list_length :
   forall {A n d} (clt : complete_leaf_tree A n d),
   length (complete_leaf_tree_to_list clt) = Nat.pow n d.
@@ -267,24 +332,6 @@ Proof.
     + rewrite sized_list_to_list_length. auto.
     + auto.
 Qed.
-
-Fixpoint complete_leaf_tree_nth {A n d} (isl : sized_list nat d) (clt : complete_leaf_tree A n d) : option A :=
-  match d with
-  | 0 => fun (isl : sized_list nat 0) (clt : complete_leaf_tree A n 0) =>
-    Some (clt : A)
-  | S d' => fun (isl : sized_list nat (S d')) (clt : complete_leaf_tree A n (S d')) =>
-    match isl with
-    | @SizedListCons _ d'0 i isl'0 => fun (Heqd : S d'0 = S d') =>
-      let isl' := rew (eq_add_S _ _ Heqd) in isl'0 in
-      option_flat_map (complete_leaf_tree_nth isl') (sized_list_nth i clt)
-    end eq_refl
-  end isl clt.
-
-Section Example.
-
-Compute complete_leaf_tree_nth [|1; 1; 0|] [|[|[|0; 1|]; [|2; 3|]|]; [|[|4; 5|]; [|6; 7|]|]|].
-
-End Example.
 
 Inductive digital_list {A n} : nat -> Type :=
   | DigitalListNil : digital_list 0
@@ -467,6 +514,53 @@ Proof.
       symmetry. rewrite PeanoNat.Nat.mul_comm. apply PeanoNat.Nat.div_mod_eq.
 Qed.
 
+Theorem indexes_sized_list_to_index_upper_bounded :
+  forall {n d} (isl : sized_list nat d),
+  sized_list_forall (fun i => i < n) isl ->
+  indexes_sized_list_to_index n isl < Nat.pow n d.
+Proof.
+  intros ? ? ?. induction isl; intros ?.
+  - simpl. lia.
+  - simpl. destruct H as (? & ?). specialize (IHisl H0); clear H0. nia.
+Qed.
+
+Fixpoint complete_leaf_tree_nth {A n d} (isl : sized_list nat d) (clt : complete_leaf_tree A n d) : option A :=
+  match d with
+  | 0 => fun (isl : sized_list nat 0) (clt : complete_leaf_tree A n 0) =>
+    Some (clt : A)
+  | S d' => fun (isl : sized_list nat (S d')) (clt : complete_leaf_tree A n (S d')) =>
+    match isl with
+    | @SizedListCons _ d'0 i isl'0 => fun (Heqd : S d'0 = S d') =>
+      let isl' := rew (eq_add_S _ _ Heqd) in isl'0 in
+      option_flat_map (complete_leaf_tree_nth isl') (sized_list_nth i clt)
+    end eq_refl
+  end isl clt.
+
+Section Example.
+
+Compute complete_leaf_tree_nth [|1; 1; 0|] [|[|[|0; 1|]; [|2; 3|]|]; [|[|4; 5|]; [|6; 7|]|]|].
+
+End Example.
+
+Theorem complete_leaf_tree_nth_correct :
+  forall {A n d} (isl : sized_list nat d) (clt : complete_leaf_tree A n d),
+  sized_list_forall (fun i => i < n) isl ->
+  complete_leaf_tree_nth isl clt =
+    List.nth_error (complete_leaf_tree_to_list clt) (indexes_sized_list_to_index n isl).
+Proof.
+  intros ? ? ?. induction d; intros ? ? ?.
+  - remember 0. destruct isl.
+    + auto.
+    + discriminate.
+  - remember (S d) as d0. destruct isl.
+    + discriminate.
+    + injection Heqd0 as ->. destruct H as (? & ?). simpl.
+      rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_nth_error_constant_length_for_type.
+      * rewrite sized_list_nth_correct. apply option_flat_map_ext. intros clt'. apply IHd. auto.
+      * apply complete_leaf_tree_to_list_length.
+      * apply indexes_sized_list_to_index_upper_bounded. auto.
+Qed.
+
 Fixpoint digital_list_nth_inner {A n d} (isl : sized_list nat d) (dl : digital_list A n d) : option A :=
   match dl with
   | DigitalListNil => fun (isl : sized_list nat 0) =>
@@ -517,8 +611,8 @@ Compute
       match i with
       | 0 => []
       | S i' => f i' ++ [concrete_digital_list_nth i' cdl]
-      end
-  in (
+      end in
+  (
     concrete_digital_list_to_list cdl,
     f (concrete_digital_list_length cdl),
     concrete_digital_list_nth 100 cdl
