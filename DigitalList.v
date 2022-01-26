@@ -2,7 +2,7 @@
 Abbreviations used:
 - red - a reduction lemma
 - sl - a sized_list
-- isl - a sized_list of indexes (digits)
+- isl - a sized_list of indexes (digits of the original index)
 - clt - a complete_leaf_tree
 - dl - a digital_list
 - cdl - a concrete_digital_list
@@ -49,6 +49,21 @@ Proof.
     + intros ? ?. apply H. intros k ?. apply IHn. lia.
 Qed.
 
+Theorem option_map_ext :
+  forall {A B} (f g : A -> B) o,
+  (forall a, f a = g a) ->
+  option_map f o = option_map g o.
+Proof.
+  intros ? ? ? ? ? ?. destruct o; simpl; f_equal; auto.
+Qed.
+
+Theorem option_map_option_map :
+  forall {A B C} (f : A -> B) (g : B -> C) o,
+  option_map g (option_map f o) = option_map (Basics.compose g f) o.
+Proof.
+  intros ? ? ? ? ? ?. destruct o; auto.
+Qed.
+
 Definition option_flat_map {A B} (f : A -> option B) (o : option A) : option B :=
   match o with
   | None => None
@@ -61,6 +76,120 @@ Theorem option_flat_map_ext :
   option_flat_map f o = option_flat_map g o.
 Proof.
   intros ? ? ? ? ? ?. destruct o; simpl; auto.
+Qed.
+
+Theorem option_map_flat_option_map :
+  forall {A B C} (f : A -> B) (g : B -> option C) o,
+  option_flat_map g (option_map f o) = option_flat_map (Basics.compose g f) o.
+Proof.
+  intros ? ? ? ? ? ?. destruct o; auto.
+Qed.
+
+Theorem option_map_option_flat_map :
+  forall {A B C} (f : A -> option B) (g : B -> C) o,
+  option_map g (option_flat_map f o) = option_flat_map (fun x => option_map g (f x)) o.
+Proof.
+  intros ? ? ? ? ? ?. destruct o; auto.
+Qed.
+
+Lemma list_nth_error_nil : forall {A} i, List.nth_error ([] : list A) i = None.
+Proof.
+  intros ? ?. destruct i; auto.
+Qed.
+
+Lemma list_nth_error_cons :
+  forall {A} x (l : list A) i,
+  i <> 0 ->
+  List.nth_error (x :: l) i = List.nth_error l (pred i).
+Proof.
+  intros ? ? ? ? ?. destruct i.
+  - lia.
+  - auto.
+Qed.
+
+Fixpoint list_update {A} i x (l : list A) {struct i} :=
+  match l, i with
+  | [], _ => None
+  | y :: l', 0 => Some (x :: l')
+  | y :: l', S i' => option_map (fun l0 => y :: l0) (list_update i' x l')
+  end.
+
+Section Example.
+
+Compute list_update 2 10 [0; 1; 2; 3; 4; 5].
+Compute list_update 100 10 [0; 1; 2; 3; 4; 5].
+
+End Example.
+
+Lemma list_update_nil : forall {A} i x, list_update i x ([] : list A) = None.
+Proof.
+  intros ? ? ?. destruct i; auto.
+Qed.
+
+Lemma list_update_cons :
+  forall {A} x (l : list A) i y,
+  i <> 0 ->
+  list_update i y (x :: l) = option_map (cons x) (list_update (pred i) y l).
+Proof.
+  intros ? ? ? ? ? ?. destruct i.
+  - lia.
+  - auto.
+Qed.
+
+Theorem list_update_app_1 :
+  forall {A} i x (l1 l2 : list A),
+  i < length l1 ->
+  list_update i x (l1 ++ l2) = option_map (fun l0 => l0 ++ l2) (list_update i x l1).
+Proof.
+  intros ? ? ?. induction i; intros ? ? ?.
+  - simpl. destruct l1.
+    + simpl in H. lia.
+    + simpl. auto.
+  - simpl. destruct l1.
+    + simpl in H. lia.
+    + simpl. simpl in H. rewrite IHi; try lia. rewrite ? option_map_option_map. auto.
+Qed.
+
+Theorem list_update_app_2 :
+  forall {A} i x (l1 l2 : list A),
+  length l1 <= i ->
+  list_update i x (l1 ++ l2) = option_map (fun l0 => l1 ++ l0) (list_update (i - length l1) x l2).
+Proof.
+  intros ? ? ?. induction i; intros ? ? ?.
+  - simpl. destruct l1.
+    + simpl. destruct l2; auto.
+    + simpl in H. lia.
+  - simpl. destruct l1.
+    + simpl. destruct l2.
+      * auto.
+      * rewrite option_map_option_map. auto.
+    + simpl. simpl in H. rewrite IHi; try lia. rewrite ? option_map_option_map. auto.
+Qed.
+
+Theorem list_update_list_map :
+  forall {A B} (f : A -> B) i x l,
+  list_update i (f x) (List.map f l) = option_map (List.map f) (list_update i x l).
+Proof.
+  intros ? ? ? ? ?. induction i; intros ?.
+  - simpl. destruct l; auto.
+  - simpl. destruct l.
+    + auto.
+    + simpl. rewrite IHi. rewrite ? option_map_option_map. auto.
+Qed.
+
+Theorem list_update_None :
+  forall {A} i x (l : list A),
+  list_update i x l = None <-> length l <= i.
+Proof.
+  intros ? ? ?. induction i; intros ?.
+  - destruct l; simpl; intuition (discriminate || lia).
+  - destruct l.
+    + simpl. intuition (auto || lia).
+    + simpl. specialize (IHi l). split.
+      * intros. destruct (list_update i x l); intuition (discriminate || lia).
+      * intros. apply le_S_n in H. destruct (list_update i x l).
+        -- apply IHi in H. discriminate.
+        -- apply IHi. auto.
 Qed.
 
 Inductive sized_list {A} : nat -> Type :=
@@ -248,21 +377,6 @@ Proof.
         -- do 2 unrew. rewrite <- sized_list_to_list_cons. auto.
 Qed.
 
-Lemma nth_error_nil : forall {A} i, List.nth_error ([] : list A) i = None.
-Proof.
-  intros ? ?. apply List.nth_error_None. simpl. lia.
-Qed.
-
-Lemma nth_error_cons :
-  forall {A} x (l : list A) i,
-  i <> 0 ->
-  List.nth_error (x :: l) i = List.nth_error l (pred i).
-Proof.
-  intros ? ? ? ? ?. destruct i.
-  - lia.
-  - auto.
-Qed.
-
 Fixpoint sized_list_nth {A n} i (sl : sized_list A n) {struct i} :=
   match sl, i with
   | [||], _ => None
@@ -279,6 +393,24 @@ Proof.
   - simpl. destruct i.
     + auto.
     + simpl. apply IHsl.
+Qed.
+
+Fixpoint sized_list_update {A n} i x (sl : sized_list A n) {struct i} :=
+  match sl, i with
+  | [||], _ => None
+  | y :||: sl', 0 => Some (x :||: sl')
+  | y :||: sl', S i' => option_map (fun sl0 => y :||: sl0) (sized_list_update i' x sl')
+  end.
+
+Theorem sized_list_update_correct :
+  forall {A n} i x (sl : sized_list A n),
+  option_map sized_list_to_list (sized_list_update i x sl) = list_update i x (sized_list_to_list sl).
+Proof.
+  intros ? ? ? ? ?. generalize dependent i. induction sl; intros ?.
+  - simpl. destruct i; auto.
+  - simpl. destruct i.
+    + auto.
+    + simpl. rewrite <- IHsl; clear IHsl. rewrite ? option_map_option_map. apply option_map_ext. auto.
 Qed.
 
 Fixpoint complete_leaf_tree A n d :=
@@ -313,20 +445,46 @@ Proof.
   - simpl. rewrite List.app_length. auto.
 Qed.
 
-Lemma flat_map_nth_error_constant_length_for_type :
+Lemma flat_map_list_nth_error_constant_length_for_type :
   forall {A B} (f : A -> list B) l k i j,
   (forall a, length (f a) = k) ->
   j < k ->
   List.nth_error (List.flat_map f l) (i * k + j) =
-  option_flat_map (fun l0 => List.nth_error (f l0) j) (List.nth_error l i).
+    option_flat_map (fun l0 => List.nth_error (f l0) j) (List.nth_error l i).
 Proof.
   intros ? ? ? ? ? ? ? ? ?. generalize dependent i. induction l; intros ?.
-  - simpl. do 2 rewrite nth_error_nil. auto.
+  - simpl. do 2 rewrite list_nth_error_nil. auto.
   - simpl. specialize (H a). destruct (PeanoNat.Nat.eqb_spec i 0).
     + subst i. clear IHl. rewrite List.nth_error_app1; try lia. simpl. destruct (List.nth_error (f a) j); auto.
     + rewrite List.nth_error_app2; try nia.
       replace (i * k + j - length (f a)) with ((pred i) * k + j) by nia.
-      rewrite IHl; clear IHl. rewrite nth_error_cons; auto.
+      rewrite IHl; clear IHl. rewrite list_nth_error_cons; auto.
+Qed.
+
+Lemma flat_map_list_update_constant_length_for_type :
+  forall {A B} (f : A -> list B) l k i j x,
+  (forall a, length (f a) = k) ->
+  j < k ->
+  list_update (i * k + j) x (List.flat_map f l) =
+    option_map
+      (@List.concat _)
+      (
+        option_flat_map
+        (fun l0 => list_update i l0 (List.map f l))
+        (option_flat_map (fun y => list_update j x (f y)) (List.nth_error l i))
+      ).
+Proof.
+  intros ? ? ? ? ? ? ? ? ? ?. generalize dependent i. induction l; intros ?.
+  - simpl. rewrite list_nth_error_nil, list_update_nil. simpl. auto.
+  - simpl. specialize (H a). destruct (PeanoNat.Nat.eqb_spec i 0).
+    + subst i. clear IHl. rewrite list_update_app_1; try lia. simpl.
+      rewrite List.flat_map_concat_map. destruct (list_update j x (f a)); auto.
+    + rewrite list_update_app_2; try nia.
+      replace (i * k + j - length (f a)) with ((pred i) * k + j) by nia.
+      rewrite IHl; clear IHl. rewrite list_nth_error_cons; auto.
+      remember (option_flat_map (fun y => list_update j x (f y)) (List.nth_error l (Nat.pred i))) as o0.
+      destruct o0; auto. simpl. rewrite list_update_cons; auto.
+      remember (list_update (Nat.pred i) l0 (List.map f l)) as o1. destruct o1; auto.
 Qed.
 
 Theorem complete_leaf_tree_to_list_length :
@@ -588,8 +746,65 @@ Proof.
   - remember (S d) as d0. destruct isl.
     + discriminate.
     + injection Heqd0 as ->. destruct H as (? & ?). simpl.
-      rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_nth_error_constant_length_for_type.
+      rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_list_nth_error_constant_length_for_type.
       * rewrite sized_list_nth_correct. apply option_flat_map_ext. intros clt'. apply IHd. auto.
+      * apply complete_leaf_tree_to_list_length.
+      * apply indexes_sized_list_to_index_upper_bound. auto.
+Qed.
+
+Fixpoint complete_leaf_tree_update {A n d} (isl : sized_list nat d)
+  (x : A) (clt : complete_leaf_tree A n d) : option (complete_leaf_tree A n d) :=
+  match d with
+  | 0 => fun (isl : sized_list nat 0) (clt : complete_leaf_tree A n 0) =>
+    Some (x : complete_leaf_tree A n 0)
+  | S d' => fun (isl : sized_list nat (S d')) (clt : complete_leaf_tree A n (S d')) =>
+    match isl with
+    | @SizedListCons _ d'0 i isl'0 => fun (Heqd : S d'0 = S d') =>
+      let isl' := rew (eq_add_S _ _ Heqd) in isl'0 in
+      option_flat_map
+        (fun clt' => sized_list_update i clt' clt)
+        (option_flat_map (complete_leaf_tree_update isl' x) (sized_list_nth i clt))
+    end eq_refl : option (complete_leaf_tree A n (S d'))
+  end isl clt.
+
+Theorem complete_leaf_tree_update_correct :
+  forall {A n d} x (isl : sized_list nat d) (clt : complete_leaf_tree A n d),
+  sized_list_forall (fun i => i < n) isl ->
+  option_map complete_leaf_tree_to_list (complete_leaf_tree_update isl x clt) =
+    list_update (indexes_sized_list_to_index n isl) x (complete_leaf_tree_to_list clt).
+Proof.
+  intros ? ? ? ?. induction d; intros ? ? ?.
+  - simpl. remember (@indexes_sized_list_to_index 0 n isl) as i. destruct i.
+    + auto.
+    + exfalso. remember 0. destruct isl; discriminate.
+  - remember (S d) as d0. destruct isl.
+    + discriminate.
+    + injection Heqd0 as ->. destruct H as (? & ?). simpl. fold complete_leaf_tree.
+      rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_list_update_constant_length_for_type.
+      * rewrite sized_list_nth_correct. remember (List.nth_error (sized_list_to_list clt) n1) as o0.
+        fold complete_leaf_tree in o0. setoid_rewrite <- Heqo0. destruct o0; try auto.
+        simpl. rewrite <- IHd; auto; clear IHd. remember (complete_leaf_tree_update isl x c) as o1.
+        destruct o1; auto. simpl.
+        replace (
+          fun clt0 =>
+            @List.flat_map (complete_leaf_tree A n d) A (@complete_leaf_tree_to_list A n d)
+              (@sized_list_to_list (complete_leaf_tree A n d) n clt0)
+        ) with (
+          Basics.compose
+          (@List.flat_map (complete_leaf_tree A n d) A (@complete_leaf_tree_to_list A n d))
+          (fun clt0 => @sized_list_to_list (complete_leaf_tree A n d) n clt0)
+        ) by auto.
+        rewrite <- option_map_option_map. rewrite sized_list_update_correct.
+        rewrite (option_map_ext _ _ _ (List.flat_map_concat_map _)).
+        replace (
+          fun (l : list (complete_leaf_tree A n d)) => List.concat (List.map complete_leaf_tree_to_list l)
+        ) with (
+          Basics.compose
+          (@List.concat _)
+          (List.map (@complete_leaf_tree_to_list A n d))
+        ) by auto.
+        rewrite <- option_map_option_map. f_equal.
+        symmetry. apply list_update_list_map.
       * apply complete_leaf_tree_to_list_length.
       * apply indexes_sized_list_to_index_upper_bound. auto.
 Qed.
@@ -609,12 +824,12 @@ Fixpoint digital_list_nth_inner {A n d} (isl : sized_list nat d) (dl : digital_l
     end eq_refl
   end isl.
 
-Definition digital_list_nth {A n d} (i : nat) (dl : digital_list A n d) : option A :=
+Definition digital_list_nth {A n d} i (dl : digital_list A n d) : option A :=
   if Nat.ltb i (digital_list_length dl)
   then digital_list_nth_inner (indexes_sized_list_of_index n i) dl
   else None.
 
-Definition concrete_digital_list_nth {A n} (i : nat) (cdl : concrete_digital_list A n) : option A :=
+Definition concrete_digital_list_nth {A n} i (cdl : concrete_digital_list A n) : option A :=
   let '(ConcreteDigitalList _ dl) := cdl in digital_list_nth i dl.
 
 Theorem digital_list_nth_inner_correct :
@@ -625,7 +840,7 @@ Theorem digital_list_nth_inner_correct :
     List.nth_error (digital_list_to_list dl) (indexes_sized_list_to_index n isl).
 Proof.
   intros ? ? ? ? ? ? ?. induction dl.
-  - simpl. symmetry. apply nth_error_nil.
+  - simpl. symmetry. apply list_nth_error_nil.
   - rename s into sl. simpl. dependent destruction isl. rename n1 into i.
     unrew. destruct H as (? & ?). simpl in H0.
     assert (length (List.flat_map complete_leaf_tree_to_list (sized_list_to_list sl)) = Nat.pow n d * k). {
@@ -637,9 +852,8 @@ Proof.
     + subst i. rewrite IHdl; auto; try nia; clear IHdl. simpl. rewrite List.nth_error_app2.
       * f_equal. rewrite H2. lia.
       * rewrite H2. lia.
-    + clear IHdl. simpl.
-      rewrite List.nth_error_app1.
-      * rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_nth_error_constant_length_for_type.
+    + clear IHdl. simpl. rewrite List.nth_error_app1.
+      * rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_list_nth_error_constant_length_for_type.
         -- rewrite <- sized_list_nth_correct. apply option_flat_map_ext. intros clt.
            apply complete_leaf_tree_nth_correct. auto.
         -- apply complete_leaf_tree_to_list_length.
@@ -654,7 +868,8 @@ Theorem digital_list_nth_correct :
   n > 1 ->
   digital_list_nth i dl = List.nth_error (digital_list_to_list dl) i.
 Proof.
-  intros ? ? ? ? ? ?. unfold digital_list_nth. destruct (PeanoNat.Nat.ltb_spec0 i (digital_list_length dl)).
+  intros ? ? ? ? ? ?. unfold digital_list_nth.
+  destruct (PeanoNat.Nat.ltb_spec0 i (digital_list_length dl)).
   - assert (indexes_sized_list_to_index (k := d) n (indexes_sized_list_of_index n i) = i). {
       apply indexes_sized_list_to_of_correct.
       - auto.
@@ -712,3 +927,124 @@ Compute
   ).
 
 End Example.
+
+Fixpoint digital_list_update_inner {A n d} (isl : sized_list nat d) (x : A) (dl : digital_list A n d)
+  {struct dl} : option (digital_list A n d) :=
+  match dl with
+  | DigitalListNil => fun (isl : sized_list nat 0) =>
+    None
+  | @DigitalListCons _ _ d' k Hlt sl dl' => fun (isl : sized_list nat (S d')) =>
+    match isl with
+    | @SizedListCons _ d'0 i isl'0 => fun (Heqd : S d'0 = S d') =>
+      let isl' := rew (eq_add_S _ _ Heqd) in isl'0 in
+      if Nat.eqb i k
+      then
+        option_map
+          (fun dl'0 => DigitalListCons k Hlt sl dl'0)
+          (digital_list_update_inner isl' x dl')
+      else
+        option_map
+          (fun sl0 => DigitalListCons k Hlt sl0 dl')
+          (
+            option_flat_map
+              (fun clt' => sized_list_update i clt' sl)
+              (option_flat_map (complete_leaf_tree_update isl' x) (sized_list_nth i sl))
+          )
+    end eq_refl : option (digital_list A n (S d'))
+  end isl.
+
+Definition digital_list_update {A n d} i x (dl : digital_list A n d) : option (digital_list A n d) :=
+  if Nat.ltb i (digital_list_length dl)
+  then digital_list_update_inner (indexes_sized_list_of_index n i) x dl
+  else None.
+
+Definition concrete_digital_list_update {A n} i x (cdl : concrete_digital_list A n) :
+  option (concrete_digital_list A n) :=
+  let '(ConcreteDigitalList _ dl) := cdl in
+    option_map (fun dl0 => ConcreteDigitalList _ dl0) (digital_list_update i x dl).
+
+Theorem digital_list_update_inner_correct :
+  forall {A n d} (isl : sized_list nat d) x (dl : digital_list A n d),
+  sized_list_forall (fun i => i < n) isl ->
+  indexes_sized_list_to_index n isl < digital_list_length dl ->
+  option_map digital_list_to_list (digital_list_update_inner isl x dl) =
+    list_update (indexes_sized_list_to_index n isl) x (digital_list_to_list dl).
+Proof.
+  intros ? ? ? ? ? ? ? ?. induction dl.
+  - simpl. symmetry. apply list_update_nil.
+  - rename s into sl. simpl. dependent destruction isl. rename n1 into i.
+    unrew. destruct H as (? & ?). simpl in H0.
+    assert (length (List.flat_map complete_leaf_tree_to_list (sized_list_to_list sl)) = Nat.pow n d * k). {
+      rewrite (flat_map_length_constant_length_for_type _ _ (Nat.pow n d)).
+      - rewrite sized_list_to_list_length. lia.
+      - apply complete_leaf_tree_to_list_length.
+    }
+    destruct (PeanoNat.Nat.eqb_spec i k).
+    + subst i. simpl. rewrite list_update_app_2.
+      * rewrite H2.
+        replace (Nat.pow n d * k + indexes_sized_list_to_index n isl - Nat.pow n d * k)
+          with (indexes_sized_list_to_index n isl) by lia.
+        rewrite <- IHdl; auto; try nia; clear IHdl.
+        remember (digital_list_update_inner isl x dl) as o0. destruct o0; auto.
+      * rewrite H2. lia.
+    + clear IHdl. simpl. rewrite list_update_app_1.
+      * rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_list_update_constant_length_for_type.
+        -- rewrite <- sized_list_nth_correct. remember (sized_list_nth i sl) as o0. destruct o0; auto. simpl.
+           rewrite option_map_option_map. unfold Basics.compose. simpl.
+           replace (
+             fun (sl0 : sized_list (complete_leaf_tree A n d) k) =>
+               List.flat_map complete_leaf_tree_to_list (sized_list_to_list sl0) ++ digital_list_to_list dl
+           ) with (
+             Basics.compose
+             (fun l0 => l0 ++ digital_list_to_list dl)
+             (
+               Basics.compose
+               (List.flat_map complete_leaf_tree_to_list)
+               (@sized_list_to_list (complete_leaf_tree A n d) k)
+             )
+           ) by auto.
+           rewrite <- option_map_option_map. f_equal.
+           rewrite <- option_map_option_map. rewrite option_map_option_flat_map.
+           rewrite (option_flat_map_ext _ _ _ (fun _ => sized_list_update_correct _ _ _)).
+           rewrite ? option_map_option_flat_map. rewrite <- complete_leaf_tree_update_correct.
+           rewrite option_map_flat_option_map. unfold Basics.compose.
+           apply option_flat_map_ext. intros clt0. rewrite list_update_list_map.
+           ++ remember (list_update i clt0 (sized_list_to_list sl)) as o1. destruct o1; auto. simpl.
+              f_equal. apply List.flat_map_concat_map.
+           ++ auto.
+        -- apply complete_leaf_tree_to_list_length.
+        -- apply indexes_sized_list_to_index_upper_bound. auto.
+      * specialize (indexes_sized_list_to_index_upper_bound isl H1) as ?.
+        specialize (digital_list_length_upper_bound dl) as ?.
+        rewrite H2. nia.
+Qed.
+
+Theorem digital_list_update_correct :
+  forall {A n d} i x (dl : digital_list A n d),
+  n > 1 ->
+  option_map digital_list_to_list (digital_list_update i x dl) = list_update i x (digital_list_to_list dl).
+Proof.
+  intros ? ? ? ? ? ? ?. unfold digital_list_update.
+  destruct (PeanoNat.Nat.ltb_spec0 i (digital_list_length dl)).
+  - assert (indexes_sized_list_to_index (k := d) n (indexes_sized_list_of_index n i) = i). {
+      apply indexes_sized_list_to_of_correct.
+      - auto.
+      - apply (PeanoNat.Nat.le_trans _ _ _ l). apply PeanoNat.Nat.lt_le_incl.
+        apply digital_list_length_upper_bound.
+    }
+    rewrite digital_list_update_inner_correct.
+    + rewrite H0. auto.
+    + apply indexes_sized_list_of_index_upper_bound. auto.
+    + rewrite H0. auto.
+  - rewrite digital_list_length_correct in n0. symmetry. apply list_update_None. lia.
+Qed.
+
+Theorem concrete_digital_list_update_correct :
+  forall {A n} i x (cdl : concrete_digital_list A n),
+  n > 1 ->
+  option_map concrete_digital_list_to_list (concrete_digital_list_update i x cdl) =
+    list_update i x (concrete_digital_list_to_list cdl).
+Proof.
+  intros ? ? ? ? ? ?. destruct cdl as (d & dl). unfold concrete_digital_list_to_list. simpl.
+  rewrite option_map_option_map. apply digital_list_update_correct. auto.
+Qed.
