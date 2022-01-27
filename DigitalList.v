@@ -339,6 +339,21 @@ Proof.
   intros ? ? ? ? ?. unfold sized_list_rev. unrew. apply sized_list_forall_sized_list_rev_inner; simpl; auto.
 Qed.
 
+Fixpoint sized_list_push {A n} x (sl : sized_list A n) : sized_list A (S n) :=
+  match sl with
+  | [||] => [|x|]
+  | y :||: sl' => y :||: sized_list_push x sl'
+  end.
+
+Theorem sized_list_push_correct :
+  forall {A n} x (sl : sized_list A n),
+  sized_list_to_list (sized_list_push x sl) = sized_list_to_list sl ++ [x].
+Proof.
+  intros ? ? ? ?. induction sl.
+  - auto.
+  - simpl. f_equal. auto.
+Qed.
+
 Fixpoint sized_list_pop {A n} (sl : sized_list A (S n)) : sized_list A n :=
   match sl with
   | @SizedListCons _ n0 x sl'0 => fun (H : S n0 = S n) =>
@@ -940,7 +955,7 @@ Fixpoint digital_list_update_inner {A n d} (isl : sized_list nat d) (x : A) (dl 
       if Nat.eqb i k
       then
         option_map
-          (fun dl'0 => DigitalListCons k Hlt sl dl'0)
+          (DigitalListCons k Hlt sl)
           (digital_list_update_inner isl' x dl')
       else
         option_map
@@ -1047,4 +1062,91 @@ Theorem concrete_digital_list_update_correct :
 Proof.
   intros ? ? ? ? ? ?. destruct cdl as (d & dl). unfold concrete_digital_list_to_list. simpl.
   rewrite option_map_option_map. apply digital_list_update_correct. auto.
+Qed.
+
+Fixpoint digital_list_push {A n d} (x : A) (dl : digital_list A n d) :
+  option (complete_leaf_tree A n d) * (digital_list A n d) :=
+  match dl with
+  | DigitalListNil => fun _ =>
+    (Some (x : complete_leaf_tree A n 0), DigitalListNil)
+  | @DigitalListCons _ _ d' k Hlt sl dl' => fun (Heqd : d = S d') =>
+    match digital_list_push x dl' with
+    | (None, dl'0) => (None, @DigitalListCons _ _ d' k Hlt sl dl'0)
+    | (Some clt', dl'0) =>
+      match Compare_dec.le_lt_eq_dec (S k) n Hlt with
+      | left Hlt0 => (None, @DigitalListCons _ _ d' (S k) Hlt0 (sized_list_push clt' sl) dl'0)
+      | right Heq =>
+        match Compare_dec.zerop n with
+        | left _ => (None, @DigitalListCons _ _ d' k Hlt sl dl'0)
+        | right Hlt0 => (Some (rew Heq in (sized_list_push clt' sl)), @DigitalListCons _ _ d' 0 Hlt0 [||] dl'0)
+        end
+      end
+    end
+  end eq_refl.
+
+Definition concrete_digital_list_push {A n} (x : A) (cdl : concrete_digital_list A n) :
+  concrete_digital_list A n :=
+  let '(ConcreteDigitalList d dl) := cdl in
+    let (clt0_o, dl0) := digital_list_push x dl in
+      match clt0_o with
+      | None => ConcreteDigitalList d dl0
+      | Some clt0 =>
+        match Compare_dec.lt_dec 1 n with
+        | left Hlt => ConcreteDigitalList (S d) (@DigitalListCons _ _ d 1 Hlt [|clt0|] dl0)
+        | right _ => ConcreteDigitalList d dl
+        end
+      end.
+
+Theorem digital_list_push_correct :
+  forall {A n d} x (dl : digital_list A n d),
+  n > 1 ->
+  (let (clt0_o, dl0) := digital_list_push x dl in
+    match clt0_o with
+    | None => []
+    | Some clt0 => complete_leaf_tree_to_list clt0
+    end ++ digital_list_to_list dl0) = digital_list_to_list dl ++ [x].
+Proof.
+  intros ? ? ? ? ? ?. induction dl.
+  - simpl. auto.
+  - simpl. fold complete_leaf_tree.
+    remember (digital_list_push x dl) as clt0_o_dl0. destruct clt0_o_dl0 as (clt0_o, dl0).
+    destruct clt0_o as [clt0 | ].
+    + remember (
+        match Compare_dec.le_lt_eq_dec (S k) n l with
+        | left Hlt0 => (None, DigitalListCons (S k) Hlt0 (clt0 :||: s) dl0)
+        | right Heq =>
+          match Compare_dec.zerop n with
+          | left _ => (None, DigitalListCons k l s dl0)
+          | right Hlt0 =>
+            (Some (rew [sized_list (complete_leaf_tree A n d)] Heq in (clt0 :||: s)),
+            DigitalListCons 0 Hlt0 [||] dl0)
+          end
+        end
+      ) as clt1_o_dl1. destruct clt1_o_dl1 as (clt1_o, dl1).
+      destruct (Compare_dec.le_lt_eq_dec (S k) n l).
+      * injection Heqclt1_o_dl1 as -> ->. simpl. rewrite <- List.app_assoc. rewrite <- IHdl.
+        rewrite sized_list_push_correct. rewrite List.flat_map_app. simpl.
+        do 2 rewrite <- List.app_assoc. auto.
+      * destruct (Compare_dec.zerop n).
+        -- lia.
+        -- injection Heqclt1_o_dl1 as -> ->. simpl. rewrite <- List.app_assoc. rewrite <- IHdl.
+           unrew. rewrite sized_list_push_correct. rewrite List.flat_map_app. simpl.
+           do 2 rewrite <- List.app_assoc. auto.
+    + simpl. simpl in IHdl. rewrite IHdl. apply List.app_assoc.
+Qed.
+
+Theorem concrete_digital_list_push_correct :
+  forall {A n} x (cdl : concrete_digital_list A n),
+  n > 1 ->
+  concrete_digital_list_to_list (concrete_digital_list_push x cdl) =
+    concrete_digital_list_to_list cdl ++ [x].
+Proof.
+  intros ? ? ? ? ?. destruct cdl as (d & dl). unfold concrete_digital_list_to_list. simpl.
+  rewrite <- digital_list_push_correct; auto.
+  remember (digital_list_push x dl) as clt0_o_dl0. destruct clt0_o_dl0 as (clt0_o, dl0).
+  destruct clt0_o as [clt0 | ].
+  - destruct (Compare_dec.lt_dec 1 n).
+    + simpl. rewrite <- List.app_assoc. auto.
+    + lia.
+  - auto.
 Qed.
