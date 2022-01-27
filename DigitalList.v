@@ -880,6 +880,25 @@ Proof.
     rewrite List.flat_map_app. simpl. rewrite List.app_nil_r. auto.
 Qed.
 
+Definition digital_list_empty {A n} : digital_list A n 0 := DigitalListNil.
+
+Definition concrete_digital_list_empty {A n} : concrete_digital_list A n :=
+  ConcreteDigitalList 0 digital_list_empty.
+
+Theorem digital_list_empty_correct :
+  forall {A n},
+  digital_list_to_list (digital_list_empty : digital_list A n 0) = [].
+Proof.
+  auto.
+Qed.
+
+Theorem concrete_digital_list_empty_correct :
+  forall {A n},
+  concrete_digital_list_to_list (concrete_digital_list_empty : concrete_digital_list A n) = [].
+Proof.
+  auto.
+Qed.
+
 Fixpoint digital_list_nth_inner {A n d} (isl : sized_list nat d) (dl : digital_list A n d)
   {struct dl} : option A :=
   match dl with
@@ -1272,3 +1291,45 @@ Proof.
   rewrite option_map_option_map. unfold Basics.compose. rewrite <- digital_list_pop_correct; auto.
   apply option_map_ext. intros (dl0, x). auto.
 Qed.
+
+Section Example.
+
+About concrete_digital_list_empty.
+Check concrete_digital_list_empty_correct.
+
+About concrete_digital_list_nth.
+Check concrete_digital_list_nth_correct.
+
+About concrete_digital_list_update.
+Check concrete_digital_list_update_correct.
+
+About concrete_digital_list_push.
+Check concrete_digital_list_push_correct.
+
+About concrete_digital_list_pop.
+Check concrete_digital_list_pop_correct.
+
+End Example.
+
+Section Example.
+
+Definition sample :=
+  let n := 3 in
+    let cdl0 := (
+      concrete_digital_list_push 5
+      (concrete_digital_list_empty : concrete_digital_list nat n)
+    ) in
+    (
+      concrete_digital_list_nth 0 cdl0,
+      option_map
+        (fun '(cdl1, x) => (concrete_digital_list_to_list cdl1, x))
+        (
+          option_flat_map
+            concrete_digital_list_pop
+            (concrete_digital_list_update 0 7 cdl0)
+        )
+    ).
+
+Compute sample.
+
+End Example.
