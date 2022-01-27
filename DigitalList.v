@@ -192,6 +192,27 @@ Proof.
         -- apply IHi. auto.
 Qed.
 
+Fixpoint list_pop {A} (l : list A) : option (list A * A) :=
+  match l with
+  | [] => None
+  | [x] => Some ([], x)
+  | x :: l' => option_map (fun '(l'0, y) => (x :: l'0, y)) (list_pop l')
+  end.
+
+Theorem list_pop_app_Some :
+  forall {A} x (l1 l2 l20 : list A),
+  list_pop l2 = Some (l20, x) ->
+  list_pop (l1 ++ l2) = Some (l1 ++ l20, x).
+Proof.
+  intros ? ? ?. induction l1; intros ? ? ?.
+  - auto.
+  - simpl. rewrite (IHl1 l2 l20); auto. simpl. destruct l1.
+    + simpl. destruct l2.
+      * discriminate.
+      * auto.
+    + auto.
+Qed.
+
 Inductive sized_list {A} : nat -> Type :=
   | SizedListNil : sized_list 0
   | SizedListCons : forall {n}, A -> sized_list n -> sized_list (S n).
@@ -354,33 +375,32 @@ Proof.
   - simpl. f_equal. auto.
 Qed.
 
-Fixpoint sized_list_pop {A n} (sl : sized_list A (S n)) : sized_list A n :=
+Fixpoint sized_list_pop {A n} (sl : sized_list A (S n)) : sized_list A n * A :=
   match sl with
   | @SizedListCons _ n0 x sl'0 => fun (H : S n0 = S n) =>
     let sl' := rew dependent (eq_add_S _ _ H) in sl'0 in
     match sl' with
     | [||] => fun _ =>
-      [||]
+      ([||], x)
     | @SizedListCons _ n' y sl'' => fun (H0 : n = S n') =>
-      x :||: sized_list_pop (rew H0 in sl')
+      let (sl'0, y) := sized_list_pop (rew H0 in sl') in
+      (x :||: sl'0, y)
     end eq_refl
   end eq_refl.
 
 Theorem sized_list_pop_correct :
   forall {A n} (sl : sized_list A (S n)),
-  sized_list_to_list (sized_list_pop sl) = List.removelast (sized_list_to_list sl).
+  (let (sl0, x) := sized_list_pop sl in sized_list_to_list sl0 ++ [x]) = sized_list_to_list sl.
 Proof.
-  intros ? ? ?.
-  replace (@sized_list_to_list A n) with (@sized_list_to_list A (pred (S n))) by auto.
-  replace (@sized_list_pop A n sl) with (@sized_list_pop A (pred (S n)) sl) by auto.
-  generalize dependent sl.
+  intros ? ?.
   cut (
-    (fun n0 (H : n0 > 0) => forall (sl : sized_list A n0),
-      @sized_list_to_list A (pred n0) (@sized_list_pop A (pred n0) (rew (Lt.S_pred_pos _ H) in sl)) =
-      @List.removelast A (@sized_list_to_list A n0 sl)
+    (fun n0 (H : n0 > 0) =>
+      forall (sl : sized_list A n0),
+        (let (sl0, x) := @sized_list_pop A (pred n0) (rew (Lt.S_pred_pos _ H) in sl) in
+          @sized_list_to_list A (pred n0) sl0 ++ [x]) = @sized_list_to_list A n0 sl
     ) (S n) (Gt.gt_Sn_O _)
   ).
-  - intros ? ?. simpl in H. rewrite <- H; clear H. unrew. auto.
+  - intros ? ?. simpl in H. rewrite <- H; clear H. unrew. destruct (@sized_list_pop A n sl). auto.
   - remember (Gt.gt_Sn_O n) as H. clear HeqH. remember (S n) as n0. clear Heqn0. intros ?.
     induction sl.
     + lia.
@@ -389,7 +409,10 @@ Proof.
       * assert (n0 > 0) by (destruct sl; [discriminate | lia]). rewrite <- (IHsl H0); clear IHsl Heql0.
         unrew. simpl. destruct sl.
         -- lia.
-        -- do 2 unrew. rewrite <- sized_list_to_list_cons. auto.
+        -- do 2 unrew.
+           replace (@sized_list_pop A (Nat.pred (S n0))) with (@sized_list_pop A n0) by auto.
+           replace (@sized_list_to_list A (Nat.pred (S n0))) with (@sized_list_to_list A n0) by auto.
+           destruct (sized_list_pop (a1 :||: sl)). rewrite sized_list_to_list_cons. auto.
 Qed.
 
 Fixpoint sized_list_nth {A n} i (sl : sized_list A n) {struct i} :=
@@ -664,11 +687,12 @@ Proof.
     + simpl in Heql0. symmetry in Heql0. apply List.app_eq_nil in Heql0. intuition discriminate.
   - simpl. destruct k.
     + simpl. remember 0. destruct isl; discriminate.
-    + rewrite (IHl0 _ _ (sized_list_pop isl)); clear IHl0.
+    + rewrite (IHl0 _ _ (fst (sized_list_pop isl))); clear IHl0.
       * simpl. lia.
       * apply (f_equal (@List.rev _)) in Heql0. rewrite List.rev_involutive in Heql0. simpl in Heql0.
-        rewrite <- List.rev_involutive at 1. f_equal. rewrite sized_list_pop_correct.
-        rewrite <- Heql0; clear Heql0. symmetry. apply List.removelast_last.
+        rewrite <- List.rev_involutive at 1. f_equal. rewrite <- sized_list_pop_correct in Heql0.
+        remember (sized_list_pop isl) as isl0. destruct isl0. simpl. apply List.app_inj_tail in Heql0.
+        intuition auto.
 Qed.
 
 Lemma indexes_sized_list_to_index_sized_list_rev_sized_list_repeat_0 :
@@ -822,6 +846,38 @@ Proof.
         symmetry. apply list_update_list_map.
       * apply complete_leaf_tree_to_list_length.
       * apply indexes_sized_list_to_index_upper_bound. auto.
+Qed.
+
+Fixpoint complete_leaf_tree_pop {A n d} (clt : complete_leaf_tree A n d) : option (digital_list A n d * A) :=
+  match d with
+  | 0 => fun (Heqd : d = 0) (clt : complete_leaf_tree A n 0) =>
+    Some (DigitalListNil, clt : A)
+  | S d' => fun (Heqd : d = S d') =>
+    match n with
+    | 0 => fun _ _ => None
+    | S n' => fun (Heqn : n = S n') (clt : complete_leaf_tree A (S n') (S d')) =>
+      let (sl0, x) := sized_list_pop clt in
+      option_map
+        (fun '(dl', y) => (DigitalListCons n' (le_n _) sl0 dl', y))
+        (complete_leaf_tree_pop x)
+    end eq_refl
+  end eq_refl clt.
+
+Theorem complete_leaf_tree_pop_correct :
+  forall {A n d} (clt : complete_leaf_tree A n d),
+  n > 1 ->
+  option_map
+    (fun '(dl, x) => digital_list_to_list dl ++ [x])
+    (complete_leaf_tree_pop clt) = Some (complete_leaf_tree_to_list clt).
+Proof.
+  intros ? ? ? ? ?. induction d.
+  - auto.
+  - simpl. destruct n; try lia. remember (sized_list_pop clt) as sl0_clt0. fold complete_leaf_tree in sl0_clt0.
+    destruct sl0_clt0 as (sl0, clt0). rewrite option_map_option_map. unfold Basics.compose.
+    specialize (IHd clt0). remember (complete_leaf_tree_pop clt0) as o0. destruct o0; try discriminate.
+    destruct p. simpl. f_equal. simpl in IHd. injection IHd as ?. rewrite <- List.app_assoc. rewrite H0.
+    specialize (sized_list_pop_correct clt) as ?. rewrite <- Heqsl0_clt0 in H1. rewrite <- H1.
+    rewrite List.flat_map_app. simpl. rewrite List.app_nil_r. auto.
 Qed.
 
 Fixpoint digital_list_nth_inner {A n d} (isl : sized_list nat d) (dl : digital_list A n d)
@@ -1111,27 +1167,13 @@ Proof.
   - simpl. fold complete_leaf_tree.
     remember (digital_list_push x dl) as clt0_o_dl0. destruct clt0_o_dl0 as (clt0_o, dl0).
     destruct clt0_o as [clt0 | ].
-    + remember (
-        match Compare_dec.le_lt_eq_dec (S k) n l with
-        | left Hlt0 => (None, DigitalListCons (S k) Hlt0 (clt0 :||: s) dl0)
-        | right Heq =>
-          match Compare_dec.zerop n with
-          | left _ => (None, DigitalListCons k l s dl0)
-          | right Hlt0 =>
-            (Some (rew [sized_list (complete_leaf_tree A n d)] Heq in (clt0 :||: s)),
-            DigitalListCons 0 Hlt0 [||] dl0)
-          end
-        end
-      ) as clt1_o_dl1. destruct clt1_o_dl1 as (clt1_o, dl1).
-      destruct (Compare_dec.le_lt_eq_dec (S k) n l).
-      * injection Heqclt1_o_dl1 as -> ->. simpl. rewrite <- List.app_assoc. rewrite <- IHdl.
+    + destruct (Compare_dec.le_lt_eq_dec (S k) n l).
+      * simpl. rewrite <- List.app_assoc. rewrite <- IHdl.
         rewrite sized_list_push_correct. rewrite List.flat_map_app. simpl.
         do 2 rewrite <- List.app_assoc. auto.
-      * destruct (Compare_dec.zerop n).
-        -- lia.
-        -- injection Heqclt1_o_dl1 as -> ->. simpl. rewrite <- List.app_assoc. rewrite <- IHdl.
-           unrew. rewrite sized_list_push_correct. rewrite List.flat_map_app. simpl.
-           do 2 rewrite <- List.app_assoc. auto.
+      * destruct (Compare_dec.zerop n); try lia. simpl. rewrite <- List.app_assoc. rewrite <- IHdl.
+        unrew. rewrite sized_list_push_correct. rewrite List.flat_map_app. simpl.
+        do 2 rewrite <- List.app_assoc. auto.
     + simpl. simpl in IHdl. rewrite IHdl. apply List.app_assoc.
 Qed.
 
@@ -1145,8 +1187,88 @@ Proof.
   rewrite <- digital_list_push_correct; auto.
   remember (digital_list_push x dl) as clt0_o_dl0. destruct clt0_o_dl0 as (clt0_o, dl0).
   destruct clt0_o as [clt0 | ].
-  - destruct (Compare_dec.lt_dec 1 n).
-    + simpl. rewrite <- List.app_assoc. auto.
-    + lia.
+  - destruct (Compare_dec.lt_dec 1 n); try lia. simpl. rewrite <- List.app_assoc. auto.
   - auto.
+Qed.
+
+Fixpoint digital_list_pop {A n d} (dl : digital_list A n d) : option (digital_list A n d * A) :=
+  match dl with
+  | DigitalListNil => None
+  | @DigitalListCons _ _ d' k Hlt sl dl' =>
+    match digital_list_pop dl' with
+    | None =>
+      match k with
+      | 0 => fun _ _ =>
+        None
+      | S k' => fun (sl : sized_list (complete_leaf_tree A n d') (S k')) (Hlt : S k' < n) =>
+        let (sl0, x) := sized_list_pop sl in
+        option_map
+          (fun '(dl'0, y) => (@DigitalListCons _ _ d' k' (PeanoNat.Nat.lt_succ_l _ _ Hlt) sl0 dl'0, y))
+          (complete_leaf_tree_pop x)
+      end sl Hlt
+    | Some (dl'0, x) => Some (@DigitalListCons _ _ d' k Hlt sl dl'0, x)
+    end
+  end.
+
+Definition concrete_digital_list_pop {A n} (cdl : concrete_digital_list A n) :
+  option (concrete_digital_list A n * A) :=
+  let '(ConcreteDigitalList d dl) := cdl in
+    option_map
+      (fun '(dl0, x) => (ConcreteDigitalList d dl0, x))
+      (digital_list_pop dl).
+
+Lemma digital_list_pop_None :
+  forall {A n d} (dl : digital_list A n d),
+  n > 1 ->
+  digital_list_pop dl = None ->
+  digital_list_to_list dl = [].
+Proof.
+  intros ? ? ? ? ? ?. induction dl.
+  - auto.
+  - rename s into sl. simpl. simpl in H0. remember (digital_list_pop dl) as o0. destruct o0 as [(dl'0, x) | ].
+    + simpl in *. discriminate.
+    + destruct k.
+      * remember 0. destruct sl; try discriminate. rewrite IHdl; auto.
+      * remember (sized_list_pop sl) as sl0_clt0. destruct sl0_clt0 as (sl0, clt0).
+        specialize (complete_leaf_tree_pop_correct clt0 H) as ?.
+        remember (complete_leaf_tree_pop clt0) as o1. destruct o1; discriminate.
+Qed.
+
+Theorem digital_list_pop_correct :
+  forall {A n d} (dl : digital_list A n d),
+  n > 1 ->
+  option_map
+    (fun '(dl0, x) => (digital_list_to_list dl0, x))
+    (digital_list_pop dl) = list_pop (digital_list_to_list dl).
+Proof.
+  intros ? ? ? ? ?. induction dl.
+  - auto.
+  - rename s into sl. simpl. remember (digital_list_pop dl) as o0. destruct o0 as [(dl'0, x) | ].
+    + simpl. simpl in IHdl. symmetry in IHdl. eapply list_pop_app_Some in IHdl. rewrite IHdl. auto.
+    + destruct k.
+      * simpl. remember 0. destruct sl; try discriminate. auto.
+      * remember (sized_list_pop sl) as sl0_clt0. destruct sl0_clt0 as (sl0, clt0).
+        rewrite option_map_option_map. unfold Basics.compose.
+        specialize (complete_leaf_tree_pop_correct clt0 H) as ?.
+        remember (complete_leaf_tree_pop clt0) as o1. destruct o1; try discriminate.
+        simpl. simpl in H0. injection H0 as ?. destruct p. simpl.
+        specialize (sized_list_pop_correct sl) as ?. rewrite <- Heqsl0_clt0 in H1.
+        rewrite <- H1. rewrite List.flat_map_app. simpl. rewrite List.app_nil_r. rewrite <- List.app_assoc.
+        rewrite <- H0. rewrite <- List.app_assoc. simpl.
+        symmetry in Heqo0. apply digital_list_pop_None in Heqo0; auto. rewrite Heqo0.
+        symmetry. apply list_pop_app_Some.
+        replace (Some (digital_list_to_list d0, a)) with (Some (digital_list_to_list d0 ++ [], a))
+          by (rewrite List.app_nil_r; auto). apply list_pop_app_Some. auto.
+Qed.
+
+Theorem concrete_digital_list_pop_correct :
+  forall {A n} (cdl : concrete_digital_list A n),
+  n > 1 ->
+  option_map
+    (fun '(cdl0, x) => (concrete_digital_list_to_list cdl0, x))
+    (concrete_digital_list_pop cdl) = list_pop (concrete_digital_list_to_list cdl).
+Proof.
+  intros ? ? ? ?. destruct cdl as (d & dl). unfold concrete_digital_list_to_list. simpl.
+  rewrite option_map_option_map. unfold Basics.compose. rewrite <- digital_list_pop_correct; auto.
+  apply option_map_ext. intros (dl0, x). auto.
 Qed.
