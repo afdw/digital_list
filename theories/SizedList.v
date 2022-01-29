@@ -85,6 +85,42 @@ Proof.
   - simpl. f_equal. auto.
 Qed.
 
+Fixpoint sized_list_nth {A n} i (sl : sized_list A n) {struct i} :=
+  match sl, i with
+  | [||], _ => None
+  | x :||: _, 0 => Some x
+  | _ :||: sl', S i' => sized_list_nth i' sl'
+  end.
+
+Theorem sized_list_nth_correct :
+  forall {A n} i (sl : sized_list A n),
+  sized_list_nth i sl = List.nth_error (sized_list_to_list sl) i.
+Proof.
+  intros ? ? ? ?. generalize dependent i. induction sl; intros ?.
+  - simpl. destruct i; auto.
+  - simpl. destruct i.
+    + auto.
+    + simpl. apply IHsl.
+Qed.
+
+Fixpoint sized_list_update {A n} i x (sl : sized_list A n) {struct i} :=
+  match sl, i with
+  | [||], _ => None
+  | y :||: sl', 0 => Some (x :||: sl')
+  | y :||: sl', S i' => option_map (fun sl0 => y :||: sl0) (sized_list_update i' x sl')
+  end.
+
+Theorem sized_list_update_correct :
+  forall {A n} i x (sl : sized_list A n),
+  option_map sized_list_to_list (sized_list_update i x sl) = list_update i x (sized_list_to_list sl).
+Proof.
+  intros ? ? ? ? ?. generalize dependent i. induction sl; intros ?.
+  - simpl. destruct i; auto.
+  - simpl. destruct i.
+    + auto.
+    + simpl. rewrite <- IHsl; clear IHsl. rewrite ? option_map_option_map. apply option_map_ext. auto.
+Qed.
+
 Fixpoint sized_list_rev_inner {A n1 n2}
   (sl1 : sized_list A n1) (sl2 : sized_list A n2) : sized_list A (n1 + n2) :=
   match sl1 with
@@ -200,40 +236,4 @@ Proof.
            replace (@sized_list_pop A (Nat.pred (S n0))) with (@sized_list_pop A n0) by auto.
            replace (@sized_list_to_list A (Nat.pred (S n0))) with (@sized_list_to_list A n0) by auto.
            destruct (sized_list_pop (a1 :||: sl)). rewrite sized_list_to_list_cons. auto.
-Qed.
-
-Fixpoint sized_list_nth {A n} i (sl : sized_list A n) {struct i} :=
-  match sl, i with
-  | [||], _ => None
-  | x :||: _, 0 => Some x
-  | _ :||: sl', S i' => sized_list_nth i' sl'
-  end.
-
-Theorem sized_list_nth_correct :
-  forall {A n} i (sl : sized_list A n),
-  sized_list_nth i sl = List.nth_error (sized_list_to_list sl) i.
-Proof.
-  intros ? ? ? ?. generalize dependent i. induction sl; intros ?.
-  - simpl. destruct i; auto.
-  - simpl. destruct i.
-    + auto.
-    + simpl. apply IHsl.
-Qed.
-
-Fixpoint sized_list_update {A n} i x (sl : sized_list A n) {struct i} :=
-  match sl, i with
-  | [||], _ => None
-  | y :||: sl', 0 => Some (x :||: sl')
-  | y :||: sl', S i' => option_map (fun sl0 => y :||: sl0) (sized_list_update i' x sl')
-  end.
-
-Theorem sized_list_update_correct :
-  forall {A n} i x (sl : sized_list A n),
-  option_map sized_list_to_list (sized_list_update i x sl) = list_update i x (sized_list_to_list sl).
-Proof.
-  intros ? ? ? ? ?. generalize dependent i. induction sl; intros ?.
-  - simpl. destruct i; auto.
-  - simpl. destruct i.
-    + auto.
-    + simpl. rewrite <- IHsl; clear IHsl. rewrite ? option_map_option_map. apply option_map_ext. auto.
 Qed.

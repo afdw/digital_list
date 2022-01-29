@@ -3,6 +3,7 @@ Abbreviations used:
 - red - a reduction lemma
 - sl - a sized_list
 - isl - a sized_list of indexes (digits of the original index)
+- a - an array
 - clt - a complete_leaf_tree
 - dl - a digital_list
 - cdl - a concrete_digital_list

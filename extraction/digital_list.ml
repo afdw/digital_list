@@ -37,50 +37,42 @@ let option_flat_map f = function
 | Some a -> f a
 | None -> None
 
-(** val sized_list_of_list : int -> 'a1 -> 'a1 list -> 'a1 array **)
+type 'a sized_list =
+| SizedListNil
+| SizedListCons of int * 'a * 'a sized_list
 
-let rec sized_list_of_list = 
-  fun n default l ->
-    let sl = Array.make n default in
-    Array.blit (Array.of_list l) 0 sl 0 (min n (List.length l));
-    sl
+(** val sized_list_repeat : int -> 'a1 -> 'a1 sized_list **)
 
+let rec sized_list_repeat n a =
+  (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+    (fun _ -> SizedListNil)
+    (fun n' -> SizedListCons (n', a, (sized_list_repeat n' a)))
+    n
 
-(** val sized_list_rev : int -> 'a1 array -> 'a1 array **)
+(** val sized_list_of_list : int -> 'a1 -> 'a1 list -> 'a1 sized_list **)
 
-let sized_list_rev = fun n l -> Array.init n (fun i -> l.(n - i - 1))
+let rec sized_list_of_list n default l =
+  (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+    (fun _ -> SizedListNil)
+    (fun n0 ->
+    match l with
+    | [] -> sized_list_repeat (succ n0) default
+    | x::l' -> SizedListCons (n0, x, (sized_list_of_list n0 default l')))
+    n
 
-(** val sized_list_push : int -> 'a1 -> 'a1 array -> 'a1 array **)
+(** val sized_list_rev_inner :
+    int -> int -> 'a1 sized_list -> 'a1 sized_list -> 'a1 sized_list **)
 
-let rec sized_list_push = 
-  fun n x sl ->
-    let sl0 = Array.make (n + 1) x in
-    Array.blit sl 0 sl0 0 n;
-    sl0
+let rec sized_list_rev_inner _ n2 sl1 sl2 =
+  match sl1 with
+  | SizedListNil -> sl2
+  | SizedListCons (n, x, sl1') ->
+    sized_list_rev_inner n (succ n2) sl1' (SizedListCons (n2, x, sl2))
 
+(** val sized_list_rev : int -> 'a1 sized_list -> 'a1 sized_list **)
 
-(** val sized_list_pop : int -> 'a1 array -> 'a1 array*'a1 **)
-
-let rec sized_list_pop = fun n sl -> (Array.sub sl 0 n, sl.(n))
-
-(** val sized_list_nth : int -> 'a1 array -> 'a1 option **)
-
-let rec sized_list_nth = 
-  fun i sl ->
-    try Some sl.(i)
-    with Invalid_argument _ -> None
-
-
-(** val sized_list_update : int -> 'a1 -> 'a1 array -> 'a1 array option **)
-
-let rec sized_list_update = 
-  fun i x sl ->
-    let sl0 = Array.copy sl in
-    try
-      sl0.(i) <- x;
-      Some sl0
-    with Invalid_argument _ -> None
-
+let sized_list_rev n sl =
+  sized_list_rev_inner n 0 sl SizedListNil
 
 (** val to_digits_func : (int*int) -> int list **)
 
@@ -114,10 +106,50 @@ let rec to_digits_func x =
 let to_digits n m =
   to_digits_func (n,m)
 
-(** val indexes_sized_list_of_index : int -> int -> int -> int array **)
+(** val indexes_sized_list_of_index : int -> int -> int -> int sized_list **)
 
 let indexes_sized_list_of_index k n m =
   sized_list_rev k (sized_list_of_list k 0 (to_digits n m))
+
+(** val array_to_list : int -> 'a1 array -> 'a1 list **)
+
+let array_to_list = fun _ a -> Array.to_list a
+
+(** val array_single : 'a1 -> 'a1 array **)
+
+let array_single = fun x -> [|x|]
+
+(** val array_nth : int -> int -> 'a1 array -> 'a1 option **)
+
+let array_nth = 
+  fun _ i sl ->
+    try Some sl.(i)
+    with Invalid_argument _ -> None
+
+
+(** val array_update : int -> int -> 'a1 -> 'a1 array -> 'a1 array option **)
+
+let array_update = 
+  fun _ i x a ->
+    let a0 = Array.copy a in
+    try
+      a0.(i) <- x;
+      Some a0
+    with Invalid_argument _ -> None
+
+
+(** val array_push : int -> 'a1 -> 'a1 array -> 'a1 array **)
+
+let array_push = 
+  fun n x a ->
+    let a0 = Array.make (n + 1) x in
+    Array.blit a 0 a0 0 n;
+    a0
+
+
+(** val array_pop : int -> 'a1 array -> 'a1 array*'a1 **)
+
+let array_pop = fun n a -> (Array.sub a 0 n, a.(n))
 
 type 'a complete_leaf_tree = __
 
@@ -128,7 +160,8 @@ let rec complete_leaf_tree_to_list n d clt =
   (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
     (fun _ -> (Obj.magic clt)::[])
     (fun d' ->
-    flat_map (complete_leaf_tree_to_list n d') (Array.to_list (Obj.magic clt)))
+    flat_map (complete_leaf_tree_to_list n d')
+      (array_to_list n (Obj.magic clt)))
     d
 
 type 'a digital_list =
@@ -142,8 +175,9 @@ type 'a concrete_digital_list =
 
 let rec digital_list_to_list n _ = function
 | DigitalListNil -> []
-| DigitalListCons (d0, _, sl, dl') ->
-  List.append (flat_map (complete_leaf_tree_to_list n d0) (Array.to_list sl))
+| DigitalListCons (d0, k, a, dl') ->
+  List.append
+    (flat_map (complete_leaf_tree_to_list n d0) (array_to_list k a))
     (digital_list_to_list n d0 dl')
 
 (** val concrete_digital_list_to_list :
@@ -166,47 +200,33 @@ let concrete_digital_list_length n = function
 | ConcreteDigitalList (d, dl) -> digital_list_length n d dl
 
 (** val complete_leaf_tree_nth :
-    int -> int -> int array -> 'a1 complete_leaf_tree -> 'a1 option **)
+    int -> int -> int sized_list -> 'a1 complete_leaf_tree -> 'a1 option **)
 
 let rec complete_leaf_tree_nth n d isl clt =
   (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
     (fun _ -> Some (Obj.magic clt))
     (fun d' ->
-    (
-    fun f_SizedListNil f_SizedListCons sl ->
-      try
-        let sl' = Array.sub sl 1 (Array.length sl - 1) in
-        f_SizedListCons (Array.length sl - 1) sl.(0) sl'
-      with Invalid_argument _ -> f_SizedListNil ()
-  )
-      (fun _ -> Obj.magic __ __)
-      (fun _ i isl'0 ->
+    match isl with
+    | SizedListNil -> Obj.magic __ __
+    | SizedListCons (_, i, isl'0) ->
       option_flat_map (complete_leaf_tree_nth n d' isl'0)
-        (sized_list_nth i (Obj.magic clt)))
-      isl)
+        (array_nth n i (Obj.magic clt)))
     d
 
 (** val complete_leaf_tree_update :
-    int -> int -> int array -> 'a1 -> 'a1 complete_leaf_tree -> 'a1
+    int -> int -> int sized_list -> 'a1 -> 'a1 complete_leaf_tree -> 'a1
     complete_leaf_tree option **)
 
 let rec complete_leaf_tree_update n d isl x clt =
   (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
     (fun _ -> Some (Obj.magic x))
     (fun d' ->
-    (
-    fun f_SizedListNil f_SizedListCons sl ->
-      try
-        let sl' = Array.sub sl 1 (Array.length sl - 1) in
-        f_SizedListCons (Array.length sl - 1) sl.(0) sl'
-      with Invalid_argument _ -> f_SizedListNil ()
-  )
-      (fun _ -> Obj.magic __ __)
-      (fun _ i isl'0 ->
-      option_flat_map (fun clt' -> Obj.magic sized_list_update i clt' clt)
+    match isl with
+    | SizedListNil -> Obj.magic __ __
+    | SizedListCons (_, i, isl'0) ->
+      option_flat_map (fun clt' -> Obj.magic array_update n i clt' clt)
         (option_flat_map (complete_leaf_tree_update n d' isl'0 x)
-          (sized_list_nth i (Obj.magic clt))))
-      isl)
+          (array_nth n i (Obj.magic clt))))
     d
 
 (** val complete_leaf_tree_pop :
@@ -219,7 +239,7 @@ let rec complete_leaf_tree_pop n d clt =
     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
       (fun _ -> None)
       (fun n' ->
-      let sl0,x = sized_list_pop n' (Obj.magic clt) in
+      let sl0,x = array_pop n' (Obj.magic clt) in
       Option.map (fun pat ->
         let dl',y = pat in (DigitalListCons (d', n', sl0, dl')),y)
         (complete_leaf_tree_pop (succ n') d' x))
@@ -237,25 +257,18 @@ let concrete_digital_list_empty n =
   ConcreteDigitalList (0, (digital_list_empty n))
 
 (** val digital_list_nth_inner :
-    int -> int -> int array -> 'a1 digital_list -> 'a1 option **)
+    int -> int -> int sized_list -> 'a1 digital_list -> 'a1 option **)
 
 let rec digital_list_nth_inner n _ isl = function
 | DigitalListNil -> None
-| DigitalListCons (d', k, sl, dl') ->
-  ((
-    fun f_SizedListNil f_SizedListCons sl ->
-      try
-        let sl' = Array.sub sl 1 (Array.length sl - 1) in
-        f_SizedListCons (Array.length sl - 1) sl.(0) sl'
-      with Invalid_argument _ -> f_SizedListNil ()
-  )
-     (fun _ -> Obj.magic __ __)
-     (fun _ i isl'0 ->
+| DigitalListCons (d', k, a, dl') ->
+  (match isl with
+   | SizedListNil -> Obj.magic __ __
+   | SizedListCons (_, i, isl'0) ->
      if (=) i k
      then digital_list_nth_inner n d' isl'0 dl'
      else option_flat_map (complete_leaf_tree_nth n d' isl'0)
-            (sized_list_nth i sl))
-     isl)
+            (array_nth k i a))
 
 (** val digital_list_nth :
     int -> int -> int -> 'a1 digital_list -> 'a1 option **)
@@ -272,29 +285,22 @@ let concrete_digital_list_nth n i = function
 | ConcreteDigitalList (d, dl) -> digital_list_nth n d i dl
 
 (** val digital_list_update_inner :
-    int -> int -> int array -> 'a1 -> 'a1 digital_list -> 'a1 digital_list
-    option **)
+    int -> int -> int sized_list -> 'a1 -> 'a1 digital_list -> 'a1
+    digital_list option **)
 
 let rec digital_list_update_inner n _ isl x = function
 | DigitalListNil -> None
-| DigitalListCons (d', k, sl, dl') ->
-  ((
-    fun f_SizedListNil f_SizedListCons sl ->
-      try
-        let sl' = Array.sub sl 1 (Array.length sl - 1) in
-        f_SizedListCons (Array.length sl - 1) sl.(0) sl'
-      with Invalid_argument _ -> f_SizedListNil ()
-  )
-     (fun _ -> Obj.magic __ __)
-     (fun _ i isl'0 ->
+| DigitalListCons (d', k, a, dl') ->
+  (match isl with
+   | SizedListNil -> Obj.magic __ __
+   | SizedListCons (_, i, isl'0) ->
      if (=) i k
-     then Option.map (fun x0 -> DigitalListCons (d', k, sl, x0))
+     then Option.map (fun x0 -> DigitalListCons (d', k, a, x0))
             (digital_list_update_inner n d' isl'0 x dl')
-     else Option.map (fun sl0 -> DigitalListCons (d', k, sl0, dl'))
-            (option_flat_map (fun clt' -> sized_list_update i clt' sl)
+     else Option.map (fun a0 -> DigitalListCons (d', k, a0, dl'))
+            (option_flat_map (fun clt' -> array_update k i clt' a)
               (option_flat_map (complete_leaf_tree_update n d' isl'0 x)
-                (sized_list_nth i sl))))
-     isl)
+                (array_nth k i a))))
 
 (** val digital_list_update :
     int -> int -> int -> 'a1 -> 'a1 digital_list -> 'a1 digital_list option **)
@@ -319,18 +325,17 @@ let concrete_digital_list_update n i x = function
 
 let rec digital_list_push n _ x = function
 | DigitalListNil -> (Some (Obj.magic x)),DigitalListNil
-| DigitalListCons (d', k, sl, dl') ->
+| DigitalListCons (d', k, a, dl') ->
   let o,dl'0 = digital_list_push n d' x dl' in
   (match o with
    | Some clt' ->
      if (<) (succ k) n
-     then None,(DigitalListCons (d', (succ k), (sized_list_push k clt' sl),
-            dl'0))
+     then None,(DigitalListCons (d', (succ k), (array_push k clt' a), dl'0))
      else if (=) 0 n
-          then None,(DigitalListCons (d', k, sl, dl'0))
-          else (Some (Obj.magic sized_list_push k clt' sl)),(DigitalListCons
-                 (d', 0, [||], dl'0))
-   | None -> None,(DigitalListCons (d', k, sl, dl'0)))
+          then None,(DigitalListCons (d', k, a, dl'0))
+          else (Some (Obj.magic array_push k clt' a)),(DigitalListCons (d',
+                 0, [||], dl'0))
+   | None -> None,(DigitalListCons (d', k, a, dl'0)))
 
 (** val concrete_digital_list_push :
     int -> 'a1 -> 'a1 concrete_digital_list -> 'a1 concrete_digital_list **)
@@ -342,13 +347,7 @@ let concrete_digital_list_push n x = function
    | Some clt0 ->
      if (<) (succ 0) n
      then ConcreteDigitalList ((succ d), (DigitalListCons (d, (succ 0),
-            ((
-      fun (n, x, sl) ->
-        let sl0 = Array.make (n + 1) x in
-        Array.blit sl 0 sl0 1 n;
-        sl0
-    )
-            (0, clt0, [||])), dl0)))
+            (array_single clt0), dl0)))
      else ConcreteDigitalList (d, dl)
    | None -> ConcreteDigitalList (d, dl0))
 
@@ -357,16 +356,16 @@ let concrete_digital_list_push n x = function
 
 let rec digital_list_pop n _ = function
 | DigitalListNil -> None
-| DigitalListCons (d', k, sl, dl') ->
+| DigitalListCons (d', k, a, dl') ->
   (match digital_list_pop n d' dl' with
-   | Some p -> let dl'0,x = p in Some ((DigitalListCons (d', k, sl, dl'0)),x)
+   | Some p -> let dl'0,x = p in Some ((DigitalListCons (d', k, a, dl'0)),x)
    | None ->
      ((fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
         (fun _ -> None)
         (fun k' ->
-        let sl0,x = sized_list_pop k' sl in
+        let a0,x = array_pop k' a in
         Option.map (fun pat ->
-          let dl'0,y = pat in (DigitalListCons (d', k', sl0, dl'0)),y)
+          let dl'0,y = pat in (DigitalListCons (d', k', a0, dl'0)),y)
           (complete_leaf_tree_pop n d' x))
         k))
 

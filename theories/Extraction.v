@@ -53,55 +53,30 @@ Extract Inlined Constant Compare_dec.le_lt_eq_dec => "(<)".
 Extract Inlined Constant Compare_dec.lt_dec => "(<)".
 Extract Inlined Constant Compare_dec.zerop => "(=) 0".
 
-Extract Inductive sized_list =>
-  "array"
-  [
-    "[||]"
-    "(
-      fun (n, x, sl) ->
-        let sl0 = Array.make (n + 1) x in
-        Array.blit sl 0 sl0 1 n;
-        sl0
-    )"
-  ]
-  "(
-    fun f_SizedListNil f_SizedListCons sl ->
-      try
-        let sl' = Array.sub sl 1 (Array.length sl - 1) in
-        f_SizedListCons (Array.length sl - 1) sl.(0) sl'
-      with Invalid_argument _ -> f_SizedListNil ()
-  )".
-Extraction Implicit sized_list_to_list [ n ].
-Extract Inlined Constant sized_list_to_list => "Array.to_list".
-Extract Constant sized_list_of_list => "
-  fun n default l ->
-    let sl = Array.make n default in
-    Array.blit (Array.of_list l) 0 sl 0 (min n (List.length l));
-    sl
-".
-Extract Constant sized_list_rev => "fun n l -> Array.init n (fun i -> l.(n - i - 1))".
-Extract Constant sized_list_push => "
-  fun n x sl ->
-    let sl0 = Array.make (n + 1) x in
-    Array.blit sl 0 sl0 0 n;
-    sl0
-".
-Extract Constant sized_list_pop => "fun n sl -> (Array.sub sl 0 n, sl.(n))".
-Extraction Implicit sized_list_nth [ n ].
-Extract Constant sized_list_nth => "
-  fun i sl ->
+Extract Inductive array => "array" ["(assert false)"] "(assert false)".
+Extract Constant array_to_list => "fun _ a -> Array.to_list a".
+Extract Inlined Constant array_empty => "[||]".
+Extract Constant array_single => "fun x -> [|x|]".
+Extract Constant array_nth => "
+  fun _ i sl ->
     try Some sl.(i)
     with Invalid_argument _ -> None
 ".
-Extraction Implicit sized_list_update [ n ].
-Extract Constant sized_list_update => "
-  fun i x sl ->
-    let sl0 = Array.copy sl in
+Extract Constant array_update => "
+  fun _ i x a ->
+    let a0 = Array.copy a in
     try
-      sl0.(i) <- x;
-      Some sl0
+      a0.(i) <- x;
+      Some a0
     with Invalid_argument _ -> None
 ".
+Extract Constant array_push => "
+  fun n x a ->
+    let a0 = Array.make (n + 1) x in
+    Array.blit a 0 a0 0 n;
+    a0
+".
+Extract Constant array_pop => "fun n a -> (Array.sub a 0 n, a.(n))".
 
 Set Extraction File Comment "Extraction start".
 
