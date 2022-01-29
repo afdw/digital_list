@@ -1,0 +1,5 @@
+(library (name digital_list) (modules digital_list))
+
+(executable (name example) (libraries digital_list) (modules example))
+
+(env (dev (flags (:standard -warn-error -A))))

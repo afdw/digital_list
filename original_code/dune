@@ -1,0 +1,3 @@
+(executable (name pnumerichunk))
+
+(env (dev (flags (:standard -warn-error -A))))

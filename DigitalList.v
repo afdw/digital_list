@@ -1322,7 +1322,7 @@ Definition sample :=
     (
       concrete_digital_list_nth 0 cdl0,
       option_map
-        (fun '(cdl1, x) => (concrete_digital_list_to_list cdl1, x))
+        (fun '(cdl1, x) => (concrete_digital_list_length cdl1, concrete_digital_list_to_list cdl1, x))
         (
           option_flat_map
             concrete_digital_list_pop
@@ -1344,6 +1344,10 @@ Extract Inductive option => "option" [ "Some" "None" ].
 Extract Inlined Constant option_map => "Option.map".
 
 Extract Inductive prod => "(*)"  [ "(,)" ].
+
+Extract Inductive sigT => "(*)"  [ "(,)" ].
+Extract Inlined Constant projT1 => "fst".
+Extract Inlined Constant projT2 => "snd".
 
 Extract Inductive list => "list" [ "[]" "(::)" ].
 Extract Inlined Constant app => "List.append".
@@ -1409,5 +1413,7 @@ Extract Constant sized_list_update => "
       Some sl0
     with Invalid_argument _ -> None
 ".
+
+Set Extraction File Comment "Extraction start".
 
 Recursive Extraction sample.
