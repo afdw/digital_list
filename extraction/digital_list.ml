@@ -82,6 +82,43 @@ let rec sized_list_update =
     with Invalid_argument _ -> None
 
 
+(** val to_digits_func : (int*int) -> int list **)
+
+let rec to_digits_func x =
+  let n = fst x in
+  let m = snd x in
+  let to_digits0 = fun n0 m0 -> to_digits_func (n0,m0) in
+  ((fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+     (fun _ ->
+     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+       (fun _ -> [])
+       (fun _ -> [])
+       m)
+     (fun n0 ->
+     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+       (fun _ ->
+       (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+         (fun _ -> [])
+         (fun _ -> m::[])
+         m)
+       (fun _ ->
+       (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+         (fun _ -> [])
+         (fun _ -> ((mod) m n)::(to_digits0 n ((/) m n)))
+         m)
+       n0)
+     n)
+
+(** val to_digits : int -> int -> int list **)
+
+let to_digits n m =
+  to_digits_func (n,m)
+
+(** val indexes_sized_list_of_index : int -> int -> int -> int array **)
+
+let indexes_sized_list_of_index k n m =
+  sized_list_rev k (sized_list_of_list k 0 (to_digits n m))
+
 type 'a complete_leaf_tree = __
 
 (** val complete_leaf_tree_to_list :
@@ -127,43 +164,6 @@ let rec digital_list_length n d = function
 
 let concrete_digital_list_length n = function
 | ConcreteDigitalList (d, dl) -> digital_list_length n d dl
-
-(** val to_digits_func : (int*int) -> int list **)
-
-let rec to_digits_func x =
-  let n = fst x in
-  let m = snd x in
-  let to_digits0 = fun n0 m0 -> to_digits_func (n0,m0) in
-  ((fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-     (fun _ ->
-     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-       (fun _ -> [])
-       (fun _ -> [])
-       m)
-     (fun n0 ->
-     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-       (fun _ ->
-       (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-         (fun _ -> [])
-         (fun _ -> m::[])
-         m)
-       (fun _ ->
-       (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-         (fun _ -> [])
-         (fun _ -> ((mod) m n)::(to_digits0 n ((/) m n)))
-         m)
-       n0)
-     n)
-
-(** val to_digits : int -> int -> int list **)
-
-let to_digits n m =
-  to_digits_func (n,m)
-
-(** val indexes_sized_list_of_index : int -> int -> int -> int array **)
-
-let indexes_sized_list_of_index k n m =
-  sized_list_rev k (sized_list_of_list k 0 (to_digits n m))
 
 (** val complete_leaf_tree_nth :
     int -> int -> int array -> 'a1 complete_leaf_tree -> 'a1 option **)
