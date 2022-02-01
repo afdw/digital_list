@@ -130,7 +130,7 @@ Fixpoint sized_list_rev_inner {A n1 n2}
   end.
 
 Definition sized_list_rev {A n} (sl : sized_list A n) : sized_list A n :=
-  rew (nat_computational_eq (PeanoNat.Nat.add_0_r _)) in (sized_list_rev_inner sl [||]).
+  rew (@nat_computational_eq (n + 0) n (PeanoNat.Nat.add_0_r _)) in (sized_list_rev_inner sl [||]).
 
 Section Example.
 

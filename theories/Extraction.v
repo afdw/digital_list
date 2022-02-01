@@ -58,8 +58,8 @@ Extract Constant array_to_list => "fun _ a -> Array.to_list a".
 Extract Inlined Constant array_empty => "[||]".
 Extract Constant array_single => "fun x -> [|x|]".
 Extract Constant array_nth => "
-  fun _ i sl ->
-    try Some sl.(i)
+  fun _ i a ->
+    try Some a.(i)
     with Invalid_argument _ -> None
 ".
 Extract Constant array_update => "

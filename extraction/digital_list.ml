@@ -14,17 +14,6 @@ let rec pow n m =
 
 
 
-module Nat =
- struct
-  (** val add : int -> int -> int **)
-
-  let rec add n m =
-    (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-      (fun _ -> m)
-      (fun p -> succ (add p m))
-      n
- end
-
 (** val flat_map : ('a1 -> 'a2 list) -> 'a1 list -> 'a2 list **)
 
 let rec flat_map f = function
@@ -122,8 +111,8 @@ let array_single = fun x -> [|x|]
 (** val array_nth : int -> int -> 'a1 array -> 'a1 option **)
 
 let array_nth = 
-  fun _ i sl ->
-    try Some sl.(i)
+  fun _ i a ->
+    try Some a.(i)
     with Invalid_argument _ -> None
 
 
