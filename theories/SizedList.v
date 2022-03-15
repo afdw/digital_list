@@ -73,7 +73,7 @@ Qed.
 Fixpoint sized_list_forall {A n} f (sl : sized_list A n) :=
   match sl with
   | [||] => True
-  | x :||: l' => f x /\ sized_list_forall f l'
+  | x :||: sl' => f x /\ sized_list_forall f sl'
   end.
 
 Theorem sized_list_to_list_length :

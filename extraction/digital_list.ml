@@ -26,6 +26,38 @@ let option_flat_map f = function
 | Some a -> f a
 | None -> None
 
+(** val to_digits_func : (int*int) -> int list **)
+
+let rec to_digits_func x =
+  let n = fst x in
+  let m = snd x in
+  let to_digits0 = fun n0 m0 -> to_digits_func (n0,m0) in
+  ((fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+     (fun _ ->
+     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+       (fun _ -> [])
+       (fun _ -> [])
+       m)
+     (fun n0 ->
+     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+       (fun _ ->
+       (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+         (fun _ -> [])
+         (fun _ -> m::[])
+         m)
+       (fun _ ->
+       (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
+         (fun _ -> [])
+         (fun _ -> ((mod) m n)::(to_digits0 n ((/) m n)))
+         m)
+       n0)
+     n)
+
+(** val to_digits : int -> int -> int list **)
+
+let to_digits n m =
+  to_digits_func (n,m)
+
 type 'a sized_list =
 | SizedListNil
 | SizedListCons of int * 'a * 'a sized_list
@@ -63,42 +95,10 @@ let rec sized_list_rev_inner _ n2 sl1 sl2 =
 let sized_list_rev n sl =
   sized_list_rev_inner n 0 sl SizedListNil
 
-(** val to_digits_func : (int*int) -> int list **)
-
-let rec to_digits_func x =
-  let n = fst x in
-  let m = snd x in
-  let to_digits0 = fun n0 m0 -> to_digits_func (n0,m0) in
-  ((fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-     (fun _ ->
-     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-       (fun _ -> [])
-       (fun _ -> [])
-       m)
-     (fun n0 ->
-     (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-       (fun _ ->
-       (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-         (fun _ -> [])
-         (fun _ -> m::[])
-         m)
-       (fun _ ->
-       (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
-         (fun _ -> [])
-         (fun _ -> ((mod) m n)::(to_digits0 n ((/) m n)))
-         m)
-       n0)
-     n)
-
-(** val to_digits : int -> int -> int list **)
-
-let to_digits n m =
-  to_digits_func (n,m)
-
 (** val indexes_sized_list_of_index : int -> int -> int -> int sized_list **)
 
-let indexes_sized_list_of_index k n m =
-  sized_list_rev k (sized_list_of_list k 0 (to_digits n m))
+let indexes_sized_list_of_index n d i =
+  sized_list_rev d (sized_list_of_list d 0 (to_digits n i))
 
 (** val array_to_list : int -> 'a1 array -> 'a1 list **)
 
@@ -264,7 +264,7 @@ let rec digital_list_nth_inner n _ isl = function
 
 let digital_list_nth n d i dl =
   if (<) i (digital_list_length n d dl)
-  then digital_list_nth_inner n d (indexes_sized_list_of_index d n i) dl
+  then digital_list_nth_inner n d (indexes_sized_list_of_index n d i) dl
   else None
 
 (** val concrete_digital_list_nth :
@@ -296,7 +296,7 @@ let rec digital_list_update_inner n _ isl x = function
 
 let digital_list_update n d i x dl =
   if (<) i (digital_list_length n d dl)
-  then digital_list_update_inner n d (indexes_sized_list_of_index d n i) x dl
+  then digital_list_update_inner n d (indexes_sized_list_of_index n d i) x dl
   else None
 
 (** val concrete_digital_list_update :
@@ -305,7 +305,7 @@ let digital_list_update n d i x dl =
 
 let concrete_digital_list_update n i x = function
 | ConcreteDigitalList (d, dl) ->
-  Option.map (fun dl0 -> ConcreteDigitalList (d, dl0))
+  Option.map (fun x0 -> ConcreteDigitalList (d, x0))
     (digital_list_update n d i x dl)
 
 (** val digital_list_push :

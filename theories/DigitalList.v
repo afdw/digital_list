@@ -184,16 +184,16 @@ Theorem complete_leaf_tree_update_correct :
     list_update (indexes_sized_list_to_index n isl) x (complete_leaf_tree_to_list clt).
 Proof.
   intros ? ? ? ?. induction d; intros ? ? ?.
-  - simpl. remember (@indexes_sized_list_to_index 0 n isl) as i. destruct i.
+  - simpl. remember (indexes_sized_list_to_index n (d := 0) isl) as i. destruct i.
     + auto.
     + exfalso. remember 0. destruct isl; discriminate.
   - remember (S d) as d0. destruct isl.
     + discriminate.
-    + injection Heqd0 as ->. destruct H as (? & ?). simpl. fold complete_leaf_tree.
+    + rename n1 into i. injection Heqd0 as ->. destruct H as (? & ?). simpl. fold complete_leaf_tree.
       rewrite PeanoNat.Nat.mul_comm. rewrite flat_map_list_update_constant_length_for_type.
-      * rewrite array_nth_correct. remember (List.nth_error (array_to_list clt) n1) as o0.
-        fold complete_leaf_tree in o0. setoid_rewrite <- Heqo0. destruct o0; try auto.
-        simpl. rewrite <- IHd; auto; clear IHd. remember (complete_leaf_tree_update isl x c) as o1.
+      * rewrite array_nth_correct. remember (List.nth_error (array_to_list clt) i) as o0.
+        fold complete_leaf_tree in o0. setoid_rewrite <- Heqo0. destruct o0 as [clt0 | ]; auto.
+        simpl. rewrite <- IHd; auto; clear IHd. remember (complete_leaf_tree_update isl x clt0) as o1.
         destruct o1; auto. simpl.
         replace (
           fun clt0 =>
@@ -245,10 +245,10 @@ Proof.
   - auto.
   - simpl. destruct n; try lia. remember (array_pop clt) as a0_clt0. fold complete_leaf_tree in a0_clt0.
     destruct a0_clt0 as (a0, clt0). rewrite option_map_option_map. unfold Basics.compose.
-    specialize (IHd clt0). remember (complete_leaf_tree_pop clt0) as o0. destruct o0; try discriminate.
-    destruct p. simpl. f_equal. simpl in IHd. injection IHd as ?. rewrite <- List.app_assoc. rewrite H0.
-    specialize (array_pop_correct clt) as ?. rewrite <- Heqa0_clt0 in H1. rewrite <- H1.
-    rewrite List.flat_map_app. simpl. rewrite List.app_nil_r. auto.
+    specialize (IHd clt0). remember (complete_leaf_tree_pop clt0) as o0.
+    destruct o0  as [(dl0, x) | ]; try discriminate. simpl. f_equal. simpl in IHd. injection IHd as ?.
+    rewrite <- List.app_assoc. rewrite H0. specialize (array_pop_correct clt) as ?. rewrite <- Heqa0_clt0 in H1.
+    rewrite <- H1. rewrite List.flat_map_app. simpl. rewrite List.app_nil_r. auto.
 Qed.
 
 Definition digital_list_empty {A n} : digital_list A n 0 := DigitalListNil.
@@ -331,7 +331,7 @@ Theorem digital_list_nth_correct :
 Proof.
   intros ? ? ? ? ? ?. unfold digital_list_nth.
   destruct (PeanoNat.Nat.ltb_spec0 i (digital_list_length dl)).
-  - assert (indexes_sized_list_to_index (k := d) n (indexes_sized_list_of_index n i) = i). {
+  - assert (indexes_sized_list_to_index n (d := d) (indexes_sized_list_of_index n i) = i). {
       apply indexes_sized_list_to_of_correct.
       - auto.
       - apply (PeanoNat.Nat.le_trans _ _ _ l). apply PeanoNat.Nat.lt_le_incl.
@@ -423,7 +423,7 @@ Definition digital_list_update {A n d} i x (dl : digital_list A n d) : option (d
 Definition concrete_digital_list_update {A n} i x (cdl : concrete_digital_list A n) :
   option (concrete_digital_list A n) :=
   let '(ConcreteDigitalList _ dl) := cdl in
-    option_map (fun dl0 => ConcreteDigitalList _ dl0) (digital_list_update i x dl).
+    option_map (ConcreteDigitalList _) (digital_list_update i x dl).
 
 Theorem digital_list_update_inner_correct :
   forall {A n d} (isl : sized_list nat d) x (dl : digital_list A n d),
@@ -488,7 +488,7 @@ Theorem digital_list_update_correct :
 Proof.
   intros ? ? ? ? ? ? ?. unfold digital_list_update.
   destruct (PeanoNat.Nat.ltb_spec0 i (digital_list_length dl)).
-  - assert (indexes_sized_list_to_index (k := d) n (indexes_sized_list_of_index n i) = i). {
+  - assert (indexes_sized_list_to_index n (d := d) (indexes_sized_list_of_index n i) = i). {
       apply indexes_sized_list_to_of_correct.
       - auto.
       - apply (PeanoNat.Nat.le_trans _ _ _ l). apply PeanoNat.Nat.lt_le_incl.
@@ -554,7 +554,7 @@ Theorem digital_list_push_correct :
     end ++ digital_list_to_list dl0) = digital_list_to_list dl ++ [x].
 Proof.
   intros ? ? ? ? ? ?. induction dl.
-  - simpl. auto.
+  - auto.
   - simpl. fold complete_leaf_tree.
     remember (digital_list_push x dl) as clt0_o_dl0. destruct clt0_o_dl0 as (clt0_o, dl0).
     destruct clt0_o as [clt0 | ].
@@ -617,7 +617,7 @@ Proof.
   intros ? ? ? ? ? ?. induction dl.
   - auto.
   - simpl. simpl in H0. remember (digital_list_pop dl) as o0. destruct o0 as [(dl'0, x) | ].
-    + simpl in *. discriminate.
+    + discriminate.
     + destruct k.
       * remember 0. destruct a as [sl]. destruct sl; try discriminate. rewrite IHdl; auto.
       * remember (array_pop a) as a0_clt0. destruct a0_clt0 as (a0, clt0).
@@ -641,15 +641,13 @@ Proof.
       * remember (array_pop a) as a0_clt0. destruct a0_clt0 as (a0, clt0).
         rewrite option_map_option_map. unfold Basics.compose.
         specialize (complete_leaf_tree_pop_correct clt0 H) as ?.
-        remember (complete_leaf_tree_pop clt0) as o1. destruct o1; try discriminate.
-        simpl. simpl in H0. injection H0 as ?. destruct p as (dl0, x). simpl.
+        remember (complete_leaf_tree_pop clt0) as o1. destruct o1 as [(dl0, x) | ]; try discriminate.
+        simpl. simpl in H0. injection H0 as ?.
         specialize (array_pop_correct a) as ?. rewrite <- Heqa0_clt0 in H1.
         rewrite <- H1. rewrite List.flat_map_app. simpl. rewrite List.app_nil_r. rewrite <- List.app_assoc.
         rewrite <- H0. rewrite <- List.app_assoc. simpl.
         symmetry in Heqo0. apply digital_list_pop_None in Heqo0; auto. rewrite Heqo0.
-        symmetry. apply list_pop_app_Some.
-        replace (Some (digital_list_to_list dl0, x)) with (Some (digital_list_to_list dl0 ++ [], x))
-          by (rewrite List.app_nil_r; auto). apply list_pop_app_Some. auto.
+        symmetry. apply list_pop_cons. apply List.app_assoc.
 Qed.
 
 Theorem concrete_digital_list_pop_correct :

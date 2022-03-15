@@ -32,9 +32,9 @@ Extract Inductive sumbool => "bool" [ "true" "false" ].
 Extract Inductive option => "option" [ "Some" "None" ].
 Extract Inlined Constant option_map => "Option.map".
 
-Extract Inductive prod => "(*)"  [ "(,)" ].
+Extract Inductive prod => "(*)" [ "(,)" ].
 
-Extract Inductive sigT => "(*)"  [ "(,)" ].
+Extract Inductive sigT => "(*)" [ "(,)" ].
 Extract Inlined Constant projT1 => "fst".
 Extract Inlined Constant projT2 => "snd".
 
@@ -53,7 +53,7 @@ Extract Inlined Constant Compare_dec.le_lt_eq_dec => "(<)".
 Extract Inlined Constant Compare_dec.lt_dec => "(<)".
 Extract Inlined Constant Compare_dec.zerop => "(=) 0".
 
-Extract Inductive array => "array" ["(assert false)"] "(assert false)".
+Extract Inductive array => "array" ["(assert false)" ] "(assert false)".
 Extract Constant array_to_list => "fun _ a -> Array.to_list a".
 Extract Inlined Constant array_empty => "[||]".
 Extract Constant array_single => "fun x -> [|x|]".

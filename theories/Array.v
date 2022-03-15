@@ -6,9 +6,7 @@ Inductive array {A n} :=
 Arguments array : clear implicits.
 
 Definition array_to_list {A n} (a : array A n) :=
-  match a with
-  | Array sl => sized_list_to_list sl
-  end.
+  let '(Array sl) := a in sized_list_to_list sl.
 
 Theorem array_to_list_length :
   forall {A n} (a : array A n),
@@ -22,9 +20,7 @@ Definition array_empty {A} : array A 0 := Array [||].
 Definition array_single {A} x : array A 1 := Array [|x|].
 
 Definition array_nth {A n} i (a : array A n) :=
-  match a with
-  | Array sl => sized_list_nth i sl
-  end.
+  let '(Array sl) := a in sized_list_nth i sl.
 
 Theorem array_nth_correct :
   forall {A n} i (a : array A n),
@@ -34,9 +30,7 @@ Proof.
 Qed.
 
 Definition array_update {A n} i x (a : array A n) :=
-  match a with
-  | Array sl => option_map Array (sized_list_update i x sl)
-  end.
+  let '(Array sl) := a in option_map Array (sized_list_update i x sl).
 
 Theorem array_update_correct :
   forall {A n} i x (a : array A n),
@@ -47,9 +41,7 @@ Proof.
 Qed.
 
 Definition array_push {A n} x (a : array A n) : array A (S n) :=
-  match a with
-  | Array sl => Array (sized_list_push x sl)
-  end.
+  let '(Array sl) := a in Array (sized_list_push x sl).
 
 Theorem array_push_correct :
   forall {A n} x (a : array A n),
@@ -59,9 +51,9 @@ Proof.
 Qed.
 
 Definition array_pop {A n} (a : array A (S n)) : array A n * A :=
-  match a with
-  | Array sl => let '(sl0, x) := (sized_list_pop sl) in (Array sl0, x)
-  end.
+  let '(Array sl) := a in
+  let '(sl0, x) := (sized_list_pop sl) in
+  (Array sl0, x).
 
 Theorem array_pop_correct :
   forall {A n} (a : array A (S n)),
