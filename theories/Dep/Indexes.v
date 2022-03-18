@@ -1,4 +1,4 @@
-Load SizedList.
+Load "Dep/SizedList".
 
 Definition indexes_sized_list_of_index n {d} i : sized_list nat d :=
   sized_list_rev (sized_list_of_list 0 (to_digits n i)).

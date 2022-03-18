@@ -1,4 +1,4 @@
-(library (name digital_list) (modules digital_list))
+(library (name digital_list) (modules digital_list signature dep non_dep) (modules_without_implementation signature))
 
 (executable (name example) (libraries digital_list) (modules example))
 

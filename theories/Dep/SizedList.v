@@ -1,4 +1,4 @@
-Load Utils.
+Load "Utils".
 
 Inductive sized_list {A} : nat -> Type :=
   | SizedListNil : sized_list 0

@@ -1,4 +1,4 @@
-Load Indexes.
+Load "Dep/Indexes".
 
 Inductive array {A n} :=
   | Array : sized_list A n -> array.

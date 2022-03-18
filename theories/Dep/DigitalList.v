@@ -1,4 +1,4 @@
-Load Array.
+Load "Dep/Array".
 
 Fixpoint complete_leaf_tree A n d :=
   match d with
