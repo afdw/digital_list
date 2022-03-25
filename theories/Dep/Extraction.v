@@ -3,10 +3,10 @@ Load "Dep/DigitalList".
 Section Example.
 
 Definition sample :=
-  let n := 3 in
+  let r := 3 in
     let cdl0 := (
       concrete_digital_list_push 5
-      (concrete_digital_list_empty : concrete_digital_list nat n)
+      (concrete_digital_list_empty : concrete_digital_list nat r)
     ) in
     (
       concrete_digital_list_nth 0 cdl0,

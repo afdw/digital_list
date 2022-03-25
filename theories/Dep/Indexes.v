@@ -1,12 +1,12 @@
 Load "Dep/SizedList".
 
-Definition indexes_sized_list_of_index n {d} i : sized_list nat d :=
-  sized_list_rev (sized_list_of_list 0 (to_digits n i)).
+Definition indexes_sized_list_of_index r {d} i : sized_list nat d :=
+  sized_list_rev (sized_list_of_list 0 (to_digits r i)).
 
-Fixpoint indexes_sized_list_to_index n {d} (isl : sized_list nat d) :=
+Fixpoint indexes_sized_list_to_index r {d} (isl : sized_list nat d) :=
   match isl with
   | [||] => 0
-  | i :||: isl' => Nat.pow n (pred d) * i + indexes_sized_list_to_index n isl'
+  | i :||: isl' => Nat.pow r (pred d) * i + indexes_sized_list_to_index r isl'
   end.
 
 Section Example.
@@ -17,9 +17,9 @@ Compute indexes_sized_list_to_index 2 [|0; 0; 0; 0; 1; 0; 1; 0|].
 End Example.
 
 Lemma indexes_sized_list_to_index_sized_list_rev_cons :
-  forall n {d} i (isl : sized_list nat d),
-  indexes_sized_list_to_index n (sized_list_rev (i :||: isl)) =
-  indexes_sized_list_to_index n (sized_list_rev isl) * n + i.
+  forall r {d} i (isl : sized_list nat d),
+  indexes_sized_list_to_index r (sized_list_rev (i :||: isl)) =
+  indexes_sized_list_to_index r (sized_list_rev isl) * r + i.
 Proof.
   intros ? ? ? ?. rewrite ? (sized_list_rev_correct_eq 0).
   remember (sized_list_to_list (i :||: isl)) as l0. simpl in Heql0. subst l0.
@@ -40,8 +40,8 @@ Proof.
 Qed.
 
 Lemma indexes_sized_list_to_index_sized_list_rev_sized_list_repeat_0 :
-  forall n {d},
-  indexes_sized_list_to_index n (d := d) (sized_list_rev (sized_list_repeat 0)) = 0.
+  forall r {d},
+  indexes_sized_list_to_index r (d := d) (sized_list_rev (sized_list_repeat 0)) = 0.
 Proof.
   intros ? ?. induction d.
   - auto.
@@ -49,10 +49,10 @@ Proof.
 Qed.
 
 Theorem indexes_sized_list_to_of_correct :
-  forall n {d} i,
-  n > 1 ->
-  i < Nat.pow n d ->
-  indexes_sized_list_to_index n (d := d) (indexes_sized_list_of_index n i) = i.
+  forall r {d} i,
+  r > 1 ->
+  i < Nat.pow r d ->
+  indexes_sized_list_to_index r (d := d) (indexes_sized_list_of_index r i) = i.
 Proof.
   intros ? ? ? ?. generalize dependent i. unfold indexes_sized_list_of_index. induction d; intros ? ?.
   - simpl. simpl in H0. lia.
@@ -60,21 +60,21 @@ Proof.
     + clear IHd. subst i. rewrite to_digits_red_any_zero.
       rewrite indexes_sized_list_to_index_sized_list_rev_cons.
       rewrite indexes_sized_list_to_index_sized_list_rev_sized_list_repeat_0. auto.
-    + assert (Nat.div i n < Nat.pow n d). {
-        simpl in H0. destruct (PeanoNat.Nat.eqb_spec (Nat.div i n) (Nat.pow n d)).
+    + assert (Nat.div i r < Nat.pow r d). {
+        simpl in H0. destruct (PeanoNat.Nat.eqb_spec (Nat.div i r) (Nat.pow r d)).
         - apply PeanoNat.Nat.div_lt_upper_bound; lia.
-        - unfold lt in H0. apply Le.le_Sn_le in H0. apply PeanoNat.Nat.div_le_mono with (c := n) in H0; try lia.
+        - unfold lt in H0. apply Le.le_Sn_le in H0. apply PeanoNat.Nat.div_le_mono with (c := r) in H0; try lia.
           rewrite PeanoNat.Nat.mul_comm in H0. rewrite PeanoNat.Nat.div_mul in H0; try lia.
       }
-      specialize (IHd (Nat.div i n) H1); clear H1. rewrite to_digits_red_any_nonzero; try lia.
+      specialize (IHd (Nat.div i r) H1); clear H1. rewrite to_digits_red_any_nonzero; try lia.
       rewrite indexes_sized_list_to_index_sized_list_rev_cons. rewrite IHd; clear IHd.
       symmetry. rewrite PeanoNat.Nat.mul_comm. apply PeanoNat.Nat.div_mod_eq.
 Qed.
 
 Theorem indexes_sized_list_of_index_upper_bound :
-  forall n {d} i,
-  n > 1 ->
-  sized_list_forall (fun i => i < n) (indexes_sized_list_of_index n (d := d) i).
+  forall r {d} i,
+  r > 1 ->
+  sized_list_forall (fun i => i < r) (indexes_sized_list_of_index r (d := d) i).
 Proof.
   intros ? ? ? ?. unfold indexes_sized_list_of_index. apply sized_list_forall_sized_list_rev.
   generalize dependent i. induction d; intros ?.
@@ -89,9 +89,9 @@ Proof.
 Qed.
 
 Theorem indexes_sized_list_to_index_upper_bound :
-  forall {n d} (isl : sized_list nat d),
-  sized_list_forall (fun i => i < n) isl ->
-  indexes_sized_list_to_index n isl < Nat.pow n d.
+  forall {r d} (isl : sized_list nat d),
+  sized_list_forall (fun i => i < r) isl ->
+  indexes_sized_list_to_index r isl < Nat.pow r d.
 Proof.
   intros ? ? ?. induction isl; intros ?.
   - simpl. lia.

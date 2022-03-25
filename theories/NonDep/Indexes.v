@@ -1,32 +1,32 @@
 Load "Utils".
 
-Fixpoint pad_list {A} n default (l : list A) :=
-  match n, l with
+Fixpoint pad_list {A} r default (l : list A) :=
+  match r, l with
   | 0, _ => []
-  | _, [] => List.repeat default n
-  | _, x :: l'  => x :: pad_list (pred n) default l'
+  | _, [] => List.repeat default r
+  | _, x :: l'  => x :: pad_list (pred r) default l'
   end.
 
 Lemma pad_list_length :
-  forall {A} n default (l : list A),
-  length (pad_list n default l) = n.
+  forall {A} r default (l : list A),
+  length (pad_list r default l) = r.
 Proof.
-  intros ? ? ? ?. generalize dependent n. induction l; intros ?.
-  - destruct n.
+  intros ? ? ? ?. generalize dependent r. induction l; intros ?.
+  - destruct r.
     + auto.
     + simpl. f_equal. apply List.repeat_length.
-  - destruct n.
+  - destruct r.
     + auto.
     + simpl. f_equal. apply IHl.
 Qed.
 
-Definition indexes_list_of_index n d i :=
-  List.rev (pad_list d 0 (to_digits n i)).
+Definition indexes_list_of_index r d i :=
+  List.rev (pad_list d 0 (to_digits r i)).
 
-Fixpoint indexes_list_to_index n d il :=
+Fixpoint indexes_list_to_index r d il :=
   match il with
   | [] => 0
-  | i :: il' => Nat.pow n (pred d) * i + indexes_list_to_index n (pred d) il'
+  | i :: il' => Nat.pow r (pred d) * i + indexes_list_to_index r (pred d) il'
   end.
 
 Section Example.
@@ -37,17 +37,17 @@ Compute indexes_list_to_index 2 8 [0; 0; 0; 0; 1; 0; 1; 0].
 End Example.
 
 Lemma indexes_list_of_index_length :
-  forall n d i,
-  length (indexes_list_of_index n d i) = d.
+  forall r d i,
+  length (indexes_list_of_index r d i) = d.
 Proof.
   intros ? ? ?. unfold indexes_list_of_index. rewrite List.rev_length. apply pad_list_length.
 Qed.
 
 Lemma indexes_list_to_index_list_rev_cons :
-  forall n d i il,
+  forall r d i il,
   length il = d ->
-  indexes_list_to_index n (S d) (List.rev (i :: il)) =
-  indexes_list_to_index n d (List.rev il) * n + i.
+  indexes_list_to_index r (S d) (List.rev (i :: il)) =
+  indexes_list_to_index r d (List.rev il) * r + i.
 Proof.
   intros ? ? ? ?. remember (List.rev il) as l0. generalize dependent il.
   generalize dependent d. generalize dependent i. induction l0; intros ? ? ? ? ?.
@@ -66,8 +66,8 @@ Proof.
 Qed.
 
 Lemma indexes_list_to_index_list_rev_list_repeat_0 :
-  forall n d,
-  indexes_list_to_index n d (List.rev (List.repeat 0 d)) = 0.
+  forall r d,
+  indexes_list_to_index r d (List.rev (List.repeat 0 d)) = 0.
 Proof.
   intros ? ?. induction d.
   - auto.
@@ -77,10 +77,10 @@ Proof.
 Qed.
 
 Theorem indexes_list_to_of_correct :
-  forall n d i,
-  n > 1 ->
-  i < Nat.pow n d ->
-  indexes_list_to_index n d (indexes_list_of_index n d i) = i.
+  forall r d i,
+  r > 1 ->
+  i < Nat.pow r d ->
+  indexes_list_to_index r d (indexes_list_of_index r d i) = i.
 Proof.
   intros ? ? ? ?. generalize dependent i. unfold indexes_list_of_index. induction d; intros ? ?.
   - simpl in H0. destruct i; try lia. rewrite to_digits_red_any_zero. simpl. auto.
@@ -89,27 +89,27 @@ Proof.
       rewrite indexes_list_to_index_list_rev_cons.
       * rewrite indexes_list_to_index_list_rev_list_repeat_0. auto.
       * apply List.repeat_length.
-    + assert (Nat.div i n < Nat.pow n d). {
-        simpl in H0. destruct (PeanoNat.Nat.eqb_spec (Nat.div i n) (Nat.pow n d)).
+    + assert (Nat.div i r < Nat.pow r d). {
+        simpl in H0. destruct (PeanoNat.Nat.eqb_spec (Nat.div i r) (Nat.pow r d)).
         - apply PeanoNat.Nat.div_lt_upper_bound; lia.
-        - unfold lt in H0. apply Le.le_Sn_le in H0. apply PeanoNat.Nat.div_le_mono with (c := n) in H0; try lia.
+        - unfold lt in H0. apply Le.le_Sn_le in H0. apply PeanoNat.Nat.div_le_mono with (c := r) in H0; try lia.
           rewrite PeanoNat.Nat.mul_comm in H0. rewrite PeanoNat.Nat.div_mul in H0; try lia.
       }
-      specialize (IHd (Nat.div i n) H1); clear H1. rewrite to_digits_red_any_nonzero; try lia.
+      specialize (IHd (Nat.div i r) H1); clear H1. rewrite to_digits_red_any_nonzero; try lia.
       simpl pad_list. rewrite indexes_list_to_index_list_rev_cons.
       * rewrite IHd; clear IHd. symmetry. rewrite PeanoNat.Nat.mul_comm. apply PeanoNat.Nat.div_mod_eq.
       * apply pad_list_length.
 Qed.
 
 Theorem indexes_list_of_index_upper_bound :
-  forall n d i,
-  n > 1 ->
-  list_forall (fun i => i < n) (indexes_list_of_index n d i).
+  forall r d i,
+  r > 1 ->
+  list_forall (fun i => i < r) (indexes_list_of_index r d i).
 Proof.
   intros ? ? ? ?. unfold indexes_list_of_index.
   rewrite list_forall_equiv. apply List.Forall_rev. rewrite <- list_forall_equiv.
   generalize dependent i. induction d; intros ?.
-  - remember (pad_list 0 0 (to_digits n i)) as l. rewrite (proj1 (List.length_zero_iff_nil l)).
+  - remember (pad_list 0 0 (to_digits r i)) as l. rewrite (proj1 (List.length_zero_iff_nil l)).
     + simpl. auto.
     + subst l. apply pad_list_length.
   - destruct (PeanoNat.Nat.eqb_spec i 0).
@@ -122,10 +122,10 @@ Proof.
 Qed.
 
 Theorem indexes_list_to_index_upper_bound :
-  forall n d il,
+  forall r d il,
   length il = d ->
-  list_forall (fun i => i < n) il ->
-  indexes_list_to_index n d il < Nat.pow n d.
+  list_forall (fun i => i < r) il ->
+  indexes_list_to_index r d il < Nat.pow r d.
 Proof.
   intros ? ? ?. generalize dependent d. induction il; intros ? ? ?.
   - simpl. simpl in H. subst d. simpl. auto.

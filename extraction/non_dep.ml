@@ -40,16 +40,16 @@ let option_flat_map f = function
 (** val to_digits_func : (int*int) -> int list **)
 
 let rec to_digits_func x =
-  let n = fst x in
+  let r = fst x in
   let m = snd x in
-  let to_digits0 = fun n0 m0 -> to_digits_func (n0,m0) in
+  let to_digits0 = fun r0 m0 -> to_digits_func (r0,m0) in
   ((fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
      (fun _ ->
      (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
        (fun _ -> [])
        (fun _ -> [])
        m)
-     (fun n0 ->
+     (fun n ->
      (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
        (fun _ ->
        (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
@@ -59,31 +59,31 @@ let rec to_digits_func x =
        (fun _ ->
        (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
          (fun _ -> [])
-         (fun _ -> ((mod) m n)::(to_digits0 n ((/) m n)))
+         (fun _ -> ((mod) m r)::(to_digits0 r ((/) m r)))
          m)
-       n0)
-     n)
+       n)
+     r)
 
 (** val to_digits : int -> int -> int list **)
 
-let to_digits n m =
-  to_digits_func (n,m)
+let to_digits r m =
+  to_digits_func (r,m)
 
 (** val pad_list : int -> 'a1 -> 'a1 list -> 'a1 list **)
 
-let rec pad_list n default l =
+let rec pad_list r default l =
   (fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
     (fun _ -> [])
     (fun _ ->
     match l with
-    | [] -> repeat default n
-    | x::l' -> x::(pad_list (pred n) default l'))
-    n
+    | [] -> repeat default r
+    | x::l' -> x::(pad_list (pred r) default l'))
+    r
 
 (** val indexes_list_of_index : int -> int -> int -> int list **)
 
-let indexes_list_of_index n d i =
-  rev (pad_list d 0 (to_digits n i))
+let indexes_list_of_index r d i =
+  rev (pad_list d 0 (to_digits r i))
 
 (** val array_length : 'a1 array -> int **)
 
@@ -155,31 +155,31 @@ type 'a concrete_digital_list =
 
 (** val digital_list_to_list : int -> int -> 'a1 digital_list -> 'a1 list **)
 
-let rec digital_list_to_list n d = function
+let rec digital_list_to_list r d = function
 | DigitalListNil -> []
 | DigitalListCons (a, dl') ->
   List.append (flat_map leaf_tree_to_list (array_to_list a))
-    (digital_list_to_list n (pred d) dl')
+    (digital_list_to_list r (pred d) dl')
 
 (** val concrete_digital_list_to_list :
     int -> 'a1 concrete_digital_list -> 'a1 list **)
 
-let concrete_digital_list_to_list n = function
-| ConcreteDigitalList (d, dl) -> digital_list_to_list n d dl
+let concrete_digital_list_to_list r = function
+| ConcreteDigitalList (d, dl) -> digital_list_to_list r d dl
 
 (** val digital_list_length : int -> int -> 'a1 digital_list -> int **)
 
-let rec digital_list_length n d = function
+let rec digital_list_length r d = function
 | DigitalListNil -> 0
 | DigitalListCons (a, dl') ->
-  (+) (( * ) (pow n (pred d)) (array_length a))
-    (digital_list_length n (pred d) dl')
+  (+) (( * ) (pow r (pred d)) (array_length a))
+    (digital_list_length r (pred d) dl')
 
 (** val concrete_digital_list_length :
     int -> 'a1 concrete_digital_list -> int **)
 
-let concrete_digital_list_length n = function
-| ConcreteDigitalList (d, dl) -> digital_list_length n d dl
+let concrete_digital_list_length r = function
+| ConcreteDigitalList (d, dl) -> digital_list_length r d dl
 
 (** val complete_leaf_tree_nth :
     int -> int list -> 'a1 leaf_tree -> 'a1 option **)
@@ -246,8 +246,8 @@ let digital_list_empty _ =
 
 (** val concrete_digital_list_empty : int -> 'a1 concrete_digital_list **)
 
-let concrete_digital_list_empty n =
-  ConcreteDigitalList (0, (digital_list_empty n))
+let concrete_digital_list_empty r =
+  ConcreteDigitalList (0, (digital_list_empty r))
 
 (** val digital_list_nth_inner :
     int -> int list -> 'a1 digital_list -> 'a1 option **)
@@ -266,16 +266,16 @@ let rec digital_list_nth_inner d il = function
 (** val digital_list_nth :
     int -> int -> int -> 'a1 digital_list -> 'a1 option **)
 
-let digital_list_nth n d i dl =
-  if (<) i (digital_list_length n d dl)
-  then digital_list_nth_inner d (indexes_list_of_index n d i) dl
+let digital_list_nth r d i dl =
+  if (<) i (digital_list_length r d dl)
+  then digital_list_nth_inner d (indexes_list_of_index r d i) dl
   else None
 
 (** val concrete_digital_list_nth :
     int -> int -> 'a1 concrete_digital_list -> 'a1 option **)
 
-let concrete_digital_list_nth n i = function
-| ConcreteDigitalList (d, dl) -> digital_list_nth n d i dl
+let concrete_digital_list_nth r i = function
+| ConcreteDigitalList (d, dl) -> digital_list_nth r d i dl
 
 (** val digital_list_update_inner :
     int -> int list -> 'a1 -> 'a1 digital_list -> 'a1 digital_list option **)
@@ -297,31 +297,31 @@ let rec digital_list_update_inner d il x = function
 (** val digital_list_update :
     int -> int -> int -> 'a1 -> 'a1 digital_list -> 'a1 digital_list option **)
 
-let digital_list_update n d i x dl =
-  if (<) i (digital_list_length n d dl)
-  then digital_list_update_inner d (indexes_list_of_index n d i) x dl
+let digital_list_update r d i x dl =
+  if (<) i (digital_list_length r d dl)
+  then digital_list_update_inner d (indexes_list_of_index r d i) x dl
   else None
 
 (** val concrete_digital_list_update :
     int -> int -> 'a1 -> 'a1 concrete_digital_list -> 'a1
     concrete_digital_list option **)
 
-let concrete_digital_list_update n i x = function
+let concrete_digital_list_update r i x = function
 | ConcreteDigitalList (d, dl) ->
   Option.map (fun x0 -> ConcreteDigitalList (d, x0))
-    (digital_list_update n d i x dl)
+    (digital_list_update r d i x dl)
 
 (** val digital_list_push :
     int -> int -> 'a1 -> 'a1 digital_list -> 'a1 leaf_tree option*'a1
     digital_list **)
 
-let rec digital_list_push n d x = function
+let rec digital_list_push r d x = function
 | DigitalListNil -> (Some (LeafTreeLeaf x)),DigitalListNil
 | DigitalListCons (a, dl') ->
-  let o,dl'0 = digital_list_push n (pred d) x dl' in
+  let o,dl'0 = digital_list_push r (pred d) x dl' in
   (match o with
    | Some clt' ->
-     if (<) (succ (array_length a)) n
+     if (<) (succ (array_length a)) r
      then None,(DigitalListCons ((array_push clt' a), dl'0))
      else (Some (LeafTreeInternalNode (array_push clt' a))),(DigitalListCons
             ([||], dl'0))
@@ -330,9 +330,9 @@ let rec digital_list_push n d x = function
 (** val concrete_digital_list_push :
     int -> 'a1 -> 'a1 concrete_digital_list -> 'a1 concrete_digital_list **)
 
-let concrete_digital_list_push n x = function
+let concrete_digital_list_push r x = function
 | ConcreteDigitalList (d, dl) ->
-  let clt0_o,dl0 = digital_list_push n d x dl in
+  let clt0_o,dl0 = digital_list_push r d x dl in
   (match clt0_o with
    | Some clt0 ->
      ConcreteDigitalList ((succ d), (DigitalListCons ((array_single clt0),
@@ -342,10 +342,10 @@ let concrete_digital_list_push n x = function
 (** val digital_list_pop :
     int -> int -> 'a1 digital_list -> ('a1 digital_list*'a1) option **)
 
-let rec digital_list_pop n d = function
+let rec digital_list_pop r d = function
 | DigitalListNil -> None
 | DigitalListCons (a, dl') ->
-  (match digital_list_pop n (pred d) dl' with
+  (match digital_list_pop r (pred d) dl' with
    | Some p -> let dl'0,x = p in Some ((DigitalListCons (a, dl'0)),x)
    | None ->
      option_flat_map (fun pat ->
@@ -357,27 +357,27 @@ let rec digital_list_pop n d = function
 (** val concrete_digital_list_pop :
     int -> 'a1 concrete_digital_list -> ('a1 concrete_digital_list*'a1) option **)
 
-let concrete_digital_list_pop n = function
+let concrete_digital_list_pop r = function
 | ConcreteDigitalList (d, dl) ->
   Option.map (fun pat -> let dl0,x = pat in (ConcreteDigitalList (d, dl0)),x)
-    (digital_list_pop n d dl)
+    (digital_list_pop r d dl)
 
 (** val sample : int option*((int*int list)*int) option **)
 
 let sample =
-  let n = succ (succ (succ 0)) in
+  let r = succ (succ (succ 0)) in
   let cdl0 =
-    concrete_digital_list_push n (succ (succ (succ (succ (succ 0)))))
-      (concrete_digital_list_empty n)
+    concrete_digital_list_push r (succ (succ (succ (succ (succ 0)))))
+      (concrete_digital_list_empty r)
   in
-  (concrete_digital_list_nth n 0 cdl0),(Option.map (fun pat ->
+  (concrete_digital_list_nth r 0 cdl0),(Option.map (fun pat ->
                                          let cdl1,x = pat in
-                                         ((concrete_digital_list_length n
+                                         ((concrete_digital_list_length r
                                             cdl1),(concrete_digital_list_to_list
-                                                    n cdl1)),x)
+                                                    r cdl1)),x)
                                          (option_flat_map
-                                           (concrete_digital_list_pop n)
-                                           (concrete_digital_list_update n 0
+                                           (concrete_digital_list_pop r)
+                                           (concrete_digital_list_update r 0
                                              (succ (succ (succ (succ (succ
                                              (succ (succ 0))))))) cdl0)))
 

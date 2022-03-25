@@ -3,19 +3,19 @@ Load DigitalList.
 Section Example.
 
 Definition sample :=
-  let n := 3 in
+  let r := 3 in
     let cdl0 := (
-      concrete_digital_list_push n 5
-      (concrete_digital_list_empty n)
+      concrete_digital_list_push r 5
+      (concrete_digital_list_empty r)
     ) in
     (
-      concrete_digital_list_nth n 0 cdl0,
+      concrete_digital_list_nth r 0 cdl0,
       option_map
-        (fun '(cdl1, x) => (concrete_digital_list_length n cdl1, concrete_digital_list_to_list n cdl1, x))
+        (fun '(cdl1, x) => (concrete_digital_list_length r cdl1, concrete_digital_list_to_list r cdl1, x))
         (
           option_flat_map
-            (concrete_digital_list_pop n)
-            (concrete_digital_list_update n 0 7 cdl0)
+            (concrete_digital_list_pop r)
+            (concrete_digital_list_update r 0 7 cdl0)
         )
     ).
 

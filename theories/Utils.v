@@ -444,15 +444,15 @@ Proof.
   - auto.
 Qed.
 
-#[program] Fixpoint to_digits n m {measure m} :=
-  match n, m with
+#[program] Fixpoint to_digits r m {measure m} :=
+  match r, m with
   | _, 0 => []
   | 0, _ => []
   | 1, _ => [m]
-  | _, _ => Nat.modulo m n :: to_digits n (Nat.div m n)
+  | _, _ => Nat.modulo m r :: to_digits r (Nat.div m r)
   end.
 Next Obligation.
-  specialize (H m). specialize (H0 m). specialize (H1 n). apply PeanoNat.Nat.div_lt; lia.
+  specialize (H m). specialize (H0 m). specialize (H1 r). apply PeanoNat.Nat.div_lt; lia.
 Qed.
 Next Obligation.
   intuition lia.
@@ -464,22 +464,22 @@ Compute to_digits 2 10.
 
 End Example.
 
-Lemma to_digits_red_any_zero : forall n, to_digits n 0 = [].
+Lemma to_digits_red_any_zero : forall r, to_digits r 0 = [].
 Proof.
   intros ?. unfold to_digits, to_digits_func.
   rewrite Wf.WfExtensionality.fix_sub_eq_ext. simpl.
-  destruct n.
+  destruct r.
   - auto.
-  - destruct n; auto.
+  - destruct r; auto.
 Qed.
 
 Lemma to_digits_red_any_nonzero :
-  forall n m,
-  n > 1 ->
+  forall r m,
+  r > 1 ->
   m <> 0 ->
-  to_digits n m = Nat.modulo m n :: to_digits n (Nat.div m n).
+  to_digits r m = Nat.modulo m r :: to_digits r (Nat.div m r).
 Proof.
   intros ? ? ? ?. unfold to_digits, to_digits_func at 1.
   rewrite Wf.WfExtensionality.fix_sub_eq_ext. fold to_digits_func. simpl.
-  do 2 (destruct n; try lia). destruct m; try lia. auto.
+  do 2 (destruct r; try lia). destruct m; try lia. auto.
 Qed.
