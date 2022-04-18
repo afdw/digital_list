@@ -10,16 +10,17 @@ module Example = functor (Dl : Digital_list.DIGITAL_LIST) -> struct
 
   let main =
     time (lazy (
-      let cdl = concrete_digital_list_empty 32 |> ref in
+      let r = 32 in
+      let cdl = concrete_digital_list_empty r |> ref in
       for _ = 0 to 10000000 do
-        cdl := !cdl |> concrete_digital_list_push 32 0
+        cdl := !cdl |> concrete_digital_list_push r 0
       done;
-      for i = 0 to 10000000 do
-        cdl := !cdl |> concrete_digital_list_update 32 i (i mod 123) |> Option.get
+      for i = 0 to (!cdl |> concrete_digital_list_length r) - 1 do
+        cdl := !cdl |> concrete_digital_list_update r i (i mod 123) |> Option.get
       done;
-      let a = Array.make (!cdl |> concrete_digital_list_length 32) 0 in
-      for i = 0 to 10000000 do
-        a.(i) <- !cdl |> concrete_digital_list_nth 32 i |> Option.get
+      let a = Array.make (!cdl |> concrete_digital_list_length r) 0 in
+      for i = 0 to (!cdl |> concrete_digital_list_length r) - 1 do
+        a.(i) <- !cdl |> concrete_digital_list_nth r i |> Option.get
       done;
       Printf.printf "Raw data size (after serialization): %f MiB\n" ((Marshal.to_bytes a [] |> Bytes.length |> float_of_int) /. 1024.0 /. 1024.0);
       Printf.printf "Data structure size (after serialization): %f MiB\n" ((Marshal.to_bytes !cdl [] |> Bytes.length |> float_of_int) /. 1024.0 /. 1024.0)
