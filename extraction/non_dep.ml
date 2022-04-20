@@ -290,7 +290,7 @@ let rec digital_list_update_inner d il x = function
      then Option.map (fun x0 -> DigitalListCons (a, x0))
             (digital_list_update_inner (pred d) il' x dl')
      else Option.map (fun a0 -> DigitalListCons (a0, dl'))
-            (option_flat_map (fun clt' -> array_update i clt' a)
+            (option_flat_map (fun lt' -> array_update i lt' a)
               (option_flat_map (complete_leaf_tree_update (pred d) il' x)
                 (array_nth i a))))
 
@@ -320,10 +320,10 @@ let rec digital_list_push r d x = function
 | DigitalListCons (a, dl') ->
   let o,dl'0 = digital_list_push r (pred d) x dl' in
   (match o with
-   | Some clt' ->
+   | Some lt0 ->
      if (<) (succ (array_length a)) r
-     then None,(DigitalListCons ((array_push clt' a), dl'0))
-     else (Some (LeafTreeInternalNode (array_push clt' a))),(DigitalListCons
+     then None,(DigitalListCons ((array_push lt0 a), dl'0))
+     else (Some (LeafTreeInternalNode (array_push lt0 a))),(DigitalListCons
             ([||], dl'0))
    | None -> None,(DigitalListCons (a, dl'0)))
 
@@ -332,10 +332,10 @@ let rec digital_list_push r d x = function
 
 let concrete_digital_list_push r x = function
 | ConcreteDigitalList (d, dl) ->
-  let clt0_o,dl0 = digital_list_push r d x dl in
-  (match clt0_o with
-   | Some clt0 ->
-     ConcreteDigitalList ((succ d), (DigitalListCons ((array_single clt0),
+  let o,dl0 = digital_list_push r d x dl in
+  (match o with
+   | Some lt0 ->
+     ConcreteDigitalList ((succ d), (DigitalListCons ((array_single lt0),
        dl0)))
    | None -> ConcreteDigitalList (d, dl0))
 
@@ -349,10 +349,10 @@ let rec digital_list_pop r d = function
    | Some p -> let dl'0,x = p in Some ((DigitalListCons (a, dl'0)),x)
    | None ->
      option_flat_map (fun pat ->
-       let a0,x = pat in
+       let a0,blt = pat in
        Option.map (fun pat0 ->
-         let dl'0,y = pat0 in (DigitalListCons (a0, dl'0)),y)
-         (complete_leaf_tree_pop (pred d) x)) (array_pop a))
+         let dl'0,x = pat0 in (DigitalListCons (a0, dl'0)),x)
+         (complete_leaf_tree_pop (pred d) blt)) (array_pop a))
 
 (** val concrete_digital_list_pop :
     int -> 'a1 concrete_digital_list -> ('a1 concrete_digital_list*'a1) option **)

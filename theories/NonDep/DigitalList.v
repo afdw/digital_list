@@ -513,7 +513,7 @@ Fixpoint digital_list_update_inner {A} d il x (dl : digital_list A) {struct dl} 
           (fun a0 => DigitalListCons a0 dl')
           (
             option_flat_map
-              (fun clt' => array_update i clt' a)
+              (fun lt' => array_update i lt' a)
               (option_flat_map (complete_leaf_tree_update (pred d) il' x) (array_nth i a))
           )
     end
@@ -578,8 +578,8 @@ Proof.
               rewrite <- option_map_option_map. rewrite option_map_option_flat_map.
               rewrite ? option_map_option_flat_map. rewrite <- complete_leaf_tree_update_correct.
               ** rewrite option_map_flat_option_map. unfold Basics.compose.
-                 apply option_flat_map_ext. intros clt0. rewrite list_update_list_map.
-                 remember (list_update i clt0 l) as o1. destruct o1; auto. simpl.
+                 apply option_flat_map_ext. intros lt0. rewrite list_update_list_map.
+                 remember (list_update i lt0 l) as o1. destruct o1; auto. simpl.
                  f_equal. apply List.flat_map_concat_map.
               ** symmetry in Heqo0. apply List.nth_error_In in Heqo0. rewrite list_forall_equiv in H8.
                  apply (proj1 (List.Forall_forall _ _) H8) in Heqo0. auto.
@@ -703,20 +703,19 @@ Fixpoint digital_list_push {A} r d (x : A) (dl : digital_list A) : option (leaf_
   | DigitalListCons a dl' =>
     match digital_list_push r (pred d) x dl' with
     | (None, dl'0) => (None, DigitalListCons a dl'0)
-    | (Some clt', dl'0) =>
+    | (Some lt0, dl'0) =>
       if Compare_dec.lt_dec (S (array_length a)) r
-      then (None, DigitalListCons (array_push clt' a) dl'0)
-      else (Some (LeafTreeInternalNode (array_push clt' a)), DigitalListCons array_empty dl'0)
+      then (None, DigitalListCons (array_push lt0 a) dl'0)
+      else (Some (LeafTreeInternalNode (array_push lt0 a)), DigitalListCons array_empty dl'0)
     end
   end.
 
 Definition concrete_digital_list_push {A} r x (cdl : concrete_digital_list A) : concrete_digital_list A :=
   let '(ConcreteDigitalList d dl) := cdl in
-    let (clt0_o, dl0) := digital_list_push r d x dl in
-      match clt0_o with
-      | None => ConcreteDigitalList d dl0
-      | Some clt0 => ConcreteDigitalList (S d) (DigitalListCons (array_single clt0) dl0)
-      end.
+    match digital_list_push r d x dl with
+    | (None, dl0) => ConcreteDigitalList d dl0
+    | (Some lt0, dl0) => ConcreteDigitalList (S d) (DigitalListCons (array_single lt0) dl0)
+    end.
 
 Theorem digital_list_push_correct :
   forall {A} r d x (dl : digital_list A),
@@ -813,10 +812,10 @@ Fixpoint digital_list_pop {A} (r : nat) d (dl : digital_list A) : option (digita
     match digital_list_pop r (pred d) dl' with
     | None =>
       option_flat_map
-        (fun '(a0, x) =>
+        (fun '(a0, blt) =>
           option_map
-            (fun '(dl'0, y) => (DigitalListCons a0 dl'0, y))
-            (complete_leaf_tree_pop (pred d) x)
+            (fun '(dl'0, x) => (DigitalListCons a0 dl'0, x))
+            (complete_leaf_tree_pop (pred d) blt)
         )
         (array_pop a)
     | Some (dl'0, x) => Some (DigitalListCons a dl'0, x)

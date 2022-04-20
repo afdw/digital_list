@@ -317,12 +317,12 @@ let rec digital_list_push r _ x = function
 | DigitalListCons (d', k, a, dl') ->
   let o,dl'0 = digital_list_push r d' x dl' in
   (match o with
-   | Some clt' ->
+   | Some clt0 ->
      if (<) (succ k) r
-     then None,(DigitalListCons (d', (succ k), (array_push k clt' a), dl'0))
+     then None,(DigitalListCons (d', (succ k), (array_push k clt0 a), dl'0))
      else if (=) 0 r
           then None,(DigitalListCons (d', k, a, dl'0))
-          else (Some (Obj.magic array_push k clt' a)),(DigitalListCons (d',
+          else (Some (Obj.magic array_push k clt0 a)),(DigitalListCons (d',
                  0, [||], dl'0))
    | None -> None,(DigitalListCons (d', k, a, dl'0)))
 
@@ -331,8 +331,8 @@ let rec digital_list_push r _ x = function
 
 let concrete_digital_list_push r x = function
 | ConcreteDigitalList (d, dl) ->
-  let clt0_o,dl0 = digital_list_push r d x dl in
-  (match clt0_o with
+  let o,dl0 = digital_list_push r d x dl in
+  (match o with
    | Some clt0 ->
      if (<) (succ 0) r
      then ConcreteDigitalList ((succ d), (DigitalListCons (d, (succ 0),
@@ -352,10 +352,10 @@ let rec digital_list_pop r _ = function
      ((fun f_O f_S n -> if n = 0 then f_O () else f_S (n - 1))
         (fun _ -> None)
         (fun k' ->
-        let a0,x = array_pop k' a in
+        let a0,blt = array_pop k' a in
         Option.map (fun pat ->
-          let dl'0,y = pat in (DigitalListCons (d', k', a0, dl'0)),y)
-          (complete_leaf_tree_pop r d' x))
+          let dl'0,x = pat in (DigitalListCons (d', k', a0, dl'0)),x)
+          (complete_leaf_tree_pop r d' blt))
         k))
 
 (** val concrete_digital_list_pop :

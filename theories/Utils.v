@@ -1,10 +1,15 @@
 (*
 Abbreviations used:
+- o - an option
 - red - a reduction lemma
+- l - a list
 - sl - a sized_list
+- il - a list of indexes (digits of the original index)
 - isl - a sized_list of indexes (digits of the original index)
 - a - an array
+- lt - a leaf_tree
 - clt - a complete_leaf_tree
+- blt - a binary_leaf_tree
 - dl - a digital_list
 - cdl - a concrete_digital_list
 *)

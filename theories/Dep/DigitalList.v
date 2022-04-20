@@ -519,13 +519,13 @@ Fixpoint digital_list_push {A r d} (x : A) (dl : digital_list A r d) :
   | @DigitalListCons _ _ d' k Hlt a dl' => fun (Heqd : d = S d') =>
     match digital_list_push x dl' with
     | (None, dl'0) => (None, @DigitalListCons _ _ d' k Hlt a dl'0)
-    | (Some clt', dl'0) =>
+    | (Some clt0, dl'0) =>
       match Compare_dec.le_lt_eq_dec (S k) r Hlt with
-      | left Hlt0 => (None, @DigitalListCons _ _ d' (S k) Hlt0 (array_push clt' a) dl'0)
+      | left Hlt0 => (None, @DigitalListCons _ _ d' (S k) Hlt0 (array_push clt0 a) dl'0)
       | right Heq =>
         match Compare_dec.zerop r with
         | left _ => (None, @DigitalListCons _ _ d' k Hlt a dl'0)
-        | right Hlt0 => (Some (rew Heq in (array_push clt' a)), @DigitalListCons _ _ d' 0 Hlt0 array_empty dl'0)
+        | right Hlt0 => (Some (rew Heq in (array_push clt0 a)), @DigitalListCons _ _ d' 0 Hlt0 array_empty dl'0)
         end
       end
     end
@@ -534,15 +534,14 @@ Fixpoint digital_list_push {A r d} (x : A) (dl : digital_list A r d) :
 Definition concrete_digital_list_push {A r} (x : A) (cdl : concrete_digital_list A r) :
   concrete_digital_list A r :=
   let '(ConcreteDigitalList d dl) := cdl in
-    let (clt0_o, dl0) := digital_list_push x dl in
-      match clt0_o with
-      | None => ConcreteDigitalList d dl0
-      | Some clt0 =>
-        match Compare_dec.lt_dec 1 r with
-        | left Hlt => ConcreteDigitalList (S d) (@DigitalListCons _ _ d 1 Hlt (array_single clt0) dl0)
-        | right _ => ConcreteDigitalList d dl
-        end
-      end.
+    match digital_list_push x dl with
+    | (None, dl0) => ConcreteDigitalList d dl0
+    | (Some clt0, dl0) =>
+      match Compare_dec.lt_dec 1 r with
+      | left Hlt => ConcreteDigitalList (S d) (@DigitalListCons _ _ d 1 Hlt (array_single clt0) dl0)
+      | right _ => ConcreteDigitalList d dl
+      end
+    end.
 
 Theorem digital_list_push_correct :
   forall {A r d} x (dl : digital_list A r d),
@@ -592,10 +591,10 @@ Fixpoint digital_list_pop {A r d} (dl : digital_list A r d) : option (digital_li
       | 0 => fun _ _ =>
         None
       | S k' => fun (a : array (complete_leaf_tree A r d') (S k')) (Hlt : S k' < r) =>
-        let (a0, x) := array_pop a in
+        let (a0, blt) := array_pop a in
         option_map
-          (fun '(dl'0, y) => (@DigitalListCons _ _ d' k' (PeanoNat.Nat.lt_succ_l _ _ Hlt) a0 dl'0, y))
-          (complete_leaf_tree_pop x)
+          (fun '(dl'0, x) => (@DigitalListCons _ _ d' k' (PeanoNat.Nat.lt_succ_l _ _ Hlt) a0 dl'0, x))
+          (complete_leaf_tree_pop blt)
       end a Hlt
     | Some (dl'0, x) => Some (@DigitalListCons _ _ d' k Hlt a dl'0, x)
     end
