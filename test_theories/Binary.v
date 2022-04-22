@@ -23,7 +23,7 @@ Inductive concrete_digital_list {A} : Type :=
 
 Arguments concrete_digital_list : clear implicits.
 
-Fixpoint digital_list_to_list {A} (d : nat) (dl : digital_list A) :=
+Fixpoint digital_list_to_list {A} d (dl : digital_list A) :=
   match dl with
   | DigitalListNil => []
   | DigitalListCons o dl' =>

@@ -2,6 +2,7 @@
 \usepackage[a4paper, total={16cm, 24cm}]{geometry}
 \usepackage[pdfusetitle]{hyperref}
 \usepackage{url}
+\usepackage{amsfonts}
 \usepackage[backend=biber, style=alphabetic, sorting=none]{biblatex}
 \addbibresource{main.bib}
 \nocite{*}
@@ -11,8 +12,11 @@
 \usepackage{tikz}
 \usetikzlibrary{matrix}
 \usetikzlibrary{arrows.meta}
-\tikzstyle{matrix_node} = [matrix of nodes, nodes={draw, minimum size=20, fill=blue!10, anchor=center}, nodes in empty cells]
+\tikzstyle{node_matrix} = [matrix of nodes, nodes in empty cells, nodes = {anchor = center, minimum size = 20, draw, fill = blue!10}, anchor = west]
 \tikzstyle{arrow} = [[-{>[length=7, width=5]}]
+\tikzstyle{leaf_tree} = [level distance = 25, level 1/.style = {sibling distance = 40}, level 2/.style = {sibling distance = 20}]
+\tikzstyle{leaf_tree_leaf} = [minimum size = 0, circle, draw]
+\tikzstyle{leaf_tree_inner_node} = [minimum size = 0, circle, draw, inner sep = 1, fill = black]
 \newenvironment{no_space_center}
     {\parskip=0pt\par\nopagebreak\centering}
     {\par\noindent\ignorespacesafterend}
@@ -37,11 +41,11 @@
 
 \section{Introduction}
 
-One of the most important data structures in functional programming are singly linked lists, which support prepending an element in the beginning, as well as destructing a non-empty list into its head (first element) and tail (the list containing the rest of elements). Conversely, arrays are frequently used in imperative programming; they support getting and setting an element by its index, as well as, in case of vectors, dynamic resizing.
+One of the most important data structures in functional programming are singly linked lists, which support prepending an element in the beginning, as well as destructing a non-empty list into its head (the first element) and tail (the list containing the rest of elements). Conversely, arrays are frequently used in imperative programming; they support getting and setting an element by its index, as well as, in case of vectors, dynamic resizing.
 
-The problem of lists is that the operation of retrieving or updating an element at a specific index has linear spacial complexity in term of the size. On the flip side, operations on arrays and vectors mutate the instance they work on, which not only makes reasoning about program behavior harder, but also means that older versions of the data structure become unaccessible for future use. One way to fix that would be making a copy before each operation, but the again would mean that now everything has linear complexity.
+The problem of lists is that the operation of retrieving or updating an element at a specific index has linear spacial complexity in term of the size. On the flip side, operations on arrays and vectors mutate the instance they work on, which not only makes reasoning about program behavior harder, but also means that older versions of the data structure become unaccessible for future use. One way to fix that would be making a copy before each operation, but that again would mean that everything would have linear complexity.
 
-This way the following question arises: is it possible to have a data structure that combines the benefits of singly linked lists and vectors?
+For these reasons, the following question arises: is it possible to have a data structure that combines the benefits of singly linked lists and vectors?
 
 \section{Similarities between numbers and lists}
 
@@ -92,20 +96,26 @@ Fixpoint app {A} (l1 l2 : list A) : list A :=
     \end{tabular}
 \end{no_padding_center}
 
-As remarked by Chris Okasaki \cite{okasaki_1998}, there is a clear resemblance between them: the only real difference is that \coqinline{list A} holds a datum of type \coqinline{A}, where as \coqinline{nat} does not. Here is how the list \coqinline{[7; 5; 9]} and the number 3 (which is the length of the list) could be represented:
+As remarked by Chris Okasaki \cite{okasaki_1998}, there is a clear resemblance between them: the only real difference is that \coqinline{list A} holds a datum of type \coqinline{A}, where as \coqinline{nat} does not. Here is how the list \coqinline{[7; 5; 8]} and the number 3 (which is the length of the list) could be represented:
 
 \begin{no_padding_center}
     \begin{tikzpicture}
-        \matrix (node1) [matrix_node, anchor=north west] at (0, 0) {
-            \coqinlinelight{cons} & 7 & \\
+        \matrix (node1) [node_matrix] at (0, 0) {
+            \coqinlinelight{cons} &
+            7 &
+            \\
         };
-        \matrix (node2) [matrix_node, anchor=north west] at (3, 0) {
-            \coqinlinelight{cons} & 5 & \\
+        \matrix (node2) [node_matrix] at (3, 0) {
+            \coqinlinelight{cons} &
+            5 &
+            \\
         };
-        \matrix (node3) [matrix_node, anchor=north west] at (6, 0) {
-            \coqinlinelight{cons} & 9 & \\
+        \matrix (node3) [node_matrix] at (6, 0) {
+            \coqinlinelight{cons} &
+            8 &
+            \\
         };
-        \matrix (node4) [matrix_node, anchor=north west] at (9, 0) {
+        \matrix (node4) [node_matrix] at (9, 0) {
             \coqinlinelight{nil} \\
         };
         \draw [arrow] (node1-1-3.center) to (node2-1-1);
@@ -114,16 +124,19 @@ As remarked by Chris Okasaki \cite{okasaki_1998}, there is a clear resemblance b
     \end{tikzpicture}
 
     \begin{tikzpicture}
-        \matrix (node1) [matrix_node, anchor=north west] at (0, 0) {
-            \coqinlinelight{S} & \\
+        \matrix (node1) [node_matrix] at (0, 0) {
+            \coqinlinelight{S} &
+            \\
         };
-        \matrix (node2) [matrix_node, anchor=north west] at (3, 0) {
-            \coqinlinelight{S} & \\
+        \matrix (node2) [node_matrix] at (3, 0) {
+            \coqinlinelight{S} &
+            \\
         };
-        \matrix (node3) [matrix_node, anchor=north west] at (6, 0) {
-            \coqinlinelight{S} & \\
+        \matrix (node3) [node_matrix] at (6, 0) {
+            \coqinlinelight{S} &
+            \\
         };
-        \matrix (node4) [matrix_node, anchor=north west] at (9, 0) {
+        \matrix (node4) [node_matrix] at (9, 0) {
             \coqinlinelight{O} \\
         };
         \draw [arrow] (node1-1-2.center) to (node2-1-1);
@@ -151,6 +164,96 @@ Fixpoint repeat {A} (x : A) (n : nat) : list A :=
   end.
         \end{coq}
     \end{tabular}
+\end{no_padding_center}
+
+\section{Binary version}
+
+As there are many ways to represent natural numbers (and not only the unary system that was considered above). Depending on which representation we chose, operations on the numbers (such as increment, decrement, sum, converting into other representations) will have different efficiency, and in each case we can find an analogous data structure.
+
+So another simple representation of natural numbers is the binary numeral system. As seen, again, by Chris Okasaki \cite{okasaki_1998}, we can augment it to contain pieces of data by complete binary leaf trees in each digit of the number (although here we will use big-endian digit ordering instead of little-endian).
+
+For the following, we will fix a data type \coqinline{A}. A ``complete binary leaf tree'' of depth $d$ has $2^d$ leaves where it stores values of type \coqinline{A}. Here is an example of a complete binary leaf tree of depth $2$ holding values $0$, $1$, $2$, $3$.
+
+\begin{no_padding_center}
+    \begin{tikzpicture}
+        \begin{scope} [leaf_tree]
+            \node [style = {leaf_tree_inner_node}] {}
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_leaf}] {$0$}
+                    }
+                    child {
+                        node [style = {leaf_tree_leaf}] {$1$}
+                    }
+                }
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_leaf}] {$2$}
+                    }
+                    child {
+                        node [style = {leaf_tree_leaf}] {$3$}
+                    }
+                };
+        \end{scope}
+    \end{tikzpicture}
+\end{no_padding_center}
+
+We know that for each natural number $n$ there are $d \in \mathbb{N}$ and $n_{d - 1}, n_{d - 2}, ..., n_0, n_1 \in \{0, 1\}$ such that $n = n_{d - 1} 2^{d - 1} + n_{d - 2} 2^{d - 2} + ... + n_1 2^1 + n_0 2^0$. A ``digital list'' of depth $d$ is a list of length $d$ of which the $k$'th element is a complete binary leaf tree of depth $k$ if $n_k = 1$ and nothing otherwise. A ``concrete digital list'' is a $d \in \mathbb{N}$ and a digital list of depth $d$.
+
+Here is an example of a digit list for $n = 5$, so $d = 3$, $n_2$ = 1, $n_1 = 0$, $n_2 = 1$, which stores values 0, 1, 2, 3, 4.
+
+\begin{no_padding_center}
+    \begin{tikzpicture}
+        \matrix (node1) [node_matrix, nodes = {minimum height = 70}] at (0, 0) {
+            \node (node1-1-1) [align = left] {\coqinlinelight{Digital} \\ \coqinlinelight{List} \\ \coqinlinelight{Cons}}; &
+            \begin{tikzpicture}
+                \begin{scope} [leaf_tree]
+                    \node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_inner_node}] {}
+                            child {
+                                node [style = {leaf_tree_leaf}] {$0$}
+                            }
+                            child {
+                                node [style = {leaf_tree_leaf}] {$1$}
+                            }
+                        }
+                        child {
+                            node [style = {leaf_tree_inner_node}] {}
+                            child {
+                                node [style = {leaf_tree_leaf}] {$2$}
+                            }
+                            child {
+                                node [style = {leaf_tree_leaf}] {$3$}
+                            }
+                        };
+                \end{scope}
+            \end{tikzpicture} &
+            \\
+        };
+        \matrix (node2) [node_matrix, nodes = {minimum height = 40}] at (6, 0) {
+            \node (node2-1-1) [align = left] {\coqinlinelight{Digital} \\ \coqinlinelight{List} \\ \coqinlinelight{Cons}}; &
+            \O &
+            \\
+        };
+        \matrix (node3) [node_matrix, nodes = {minimum height = 40}] at (10, 0) {
+            \node (node3-1-1) [align = left] {\coqinlinelight{Digital} \\ \coqinlinelight{List} \\ \coqinlinelight{Cons}}; &
+            \begin{tikzpicture}
+                \begin{scope} [leaf_tree]
+                    \node [style = {leaf_tree_leaf}] {$4$};
+                \end{scope}
+            \end{tikzpicture} &
+            \\
+        };
+        \matrix (node4) [node_matrix, nodes = {minimum height = 40}] at (14, 0) {
+            \node (node4-1-1) [align = left] {\coqinlinelight{Digital} \\ \coqinlinelight{List} \\ \coqinlinelight{Nil}}; \\
+        };
+        \draw [arrow] (node1-1-3.center) to (node2-1-1);
+        \draw [arrow] (node2-1-3.center) to (node3-1-1);
+        \draw [arrow] (node3-1-3.center) to (node4-1-1);
+    \end{tikzpicture}
 \end{no_padding_center}
 
 \printbibliography

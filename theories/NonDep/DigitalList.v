@@ -85,7 +85,7 @@ Inductive digital_list_good {A} r : nat -> digital_list A -> Prop :=
       digital_list_good r d dl ->
       digital_list_good r (S d) (DigitalListCons a dl).
 
-Fixpoint digital_list_to_list {A} (r d : nat) (dl : digital_list A) :=
+Fixpoint digital_list_to_list {A} (r : nat) d (dl : digital_list A) :=
   match dl with
   | DigitalListNil => []
   | DigitalListCons a dl' =>
