@@ -18,7 +18,7 @@ Inductive digital_list {A} :=
 
 Arguments digital_list : clear implicits.
 
-Inductive concrete_digital_list {A} : Type :=
+Inductive concrete_digital_list {A} :=
   | ConcreteDigitalList : forall (d : nat), digital_list A -> concrete_digital_list.
 
 Arguments concrete_digital_list : clear implicits.

@@ -1,12 +1,17 @@
 \documentclass{article}
-\usepackage[a4paper, total={16cm, 24cm}]{geometry}
+\usepackage[a4paper, total={19cm, 26cm}]{geometry}
 \usepackage[pdfusetitle]{hyperref}
 \usepackage{url}
+\usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage[backend=biber, style=alphabetic, sorting=none]{biblatex}
 \addbibresource{main.bib}
 \nocite{*}
 \usepackage[usenames, dvipsnames, svgnames, x11names]{xcolor}
+\usepackage{graphics}
+\usepackage{scalerel}
+\usepackage{accsupp}
+\usepackage{stmaryrd}
 \usepackage{listings}
 \usepackage{lstcoq}
 \usepackage{tikz}
@@ -23,6 +28,27 @@
 \newenvironment{no_padding_center}
     {\parskip=0pt\par\nopagebreak\centering}
     {\par\noindent}
+\newcommand*{\llbrace}{%
+    \BeginAccSupp{method=hex,unicode,ActualText=2983}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+    \EndAccSupp{}%
+}
+\newcommand*{\rrbrace}{%
+    \BeginAccSupp{method=hex,unicode,ActualText=2984}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
+    \EndAccSupp{}%
+}
+\newsavebox{\lXbrace}
+\savebox{\lXbrace}{$\llbrace$}
+\newsavebox{\rXbrace}
+\savebox{\rXbrace}{$\rrbrace$}
+\def\lxbrace{\scalerel*{\usebox{\lXbrace}}{\llbrace}}
+\def\rxbrace{\scalerel*{\usebox{\rXbrace}}{\rrbrace}}
+\newcommand{\xbraces}[1]{\scalerel[1.5ex]{\lxbrace}{#1}\scalerel*[1.5ex]{\rxbrace}{#1}}
 \title{Implementation and verification of a data structure using dependent types}
 \author{Anton Danilkin}
 \begin{document}
@@ -255,6 +281,164 @@ Here is an example of a digit list for $n = 5$, so $d = 3$, $n_2$ = 1, $n_1 = 0$
         \draw [arrow] (node3-1-3.center) to (node4-1-1);
     \end{tikzpicture}
 \end{no_padding_center}
+
+Or, to simplify the drawing, the following notation will be used form now on:
+
+\begin{no_padding_center}
+    $\xbraces{
+        \vcenter{\hbox{\begin{tikzpicture}
+            \begin{scope} [leaf_tree]
+                \node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {$0$}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {$1$}
+                        }
+                    }
+                    child {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {$2$}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {$3$}
+                        }
+                    };
+            \end{scope}
+        \end{tikzpicture}}},
+        \vcenter{\hbox{\scalebox{3}{\begin{tikzpicture}
+            \clip (-0.114, -0.1) rectangle (0.114, 0.128);
+            \node [style = {inner sep = 0}, text = black!35] {$\varnothing$};
+        \end{tikzpicture}}}},
+        \vcenter{\hbox{\begin{tikzpicture}
+            \begin{scope} [leaf_tree]
+                \node [style = {leaf_tree_leaf}] {$4$};
+            \end{scope}
+        \end{tikzpicture}}}
+    }$
+\end{no_padding_center}
+
+\subsection{Formal definitions}
+
+The function \coqinline{to_digits : forall (d n : nat), list nat} gives the list of length \coqinline{d} consisting of digits of \coqinline{i} in big-endian ordering: for example, \coqinline{to_digits 8 73} gives \coqinline{[0; 1; 0; 0; 1; 0; 0; 1]}. The inverse operation is performed by \coqinline{from_digits : forall (d : nat) (nl : list nat), nat}: for example, \coqinline{from_digits 8 [0; 1; 0; 0; 1; 0; 0; 1]} gives \coqinline{73}.
+
+The binary leaf tree, digits list and concrete digital list are defined as follows:
+
+\begin{coq}
+Inductive binary_leaf_tree {A} :=
+  | BinaryLeafTreeLeaf : A -> binary_leaf_tree
+  | BinaryLeafTreeInternalNode : binary_leaf_tree -> binary_leaf_tree -> binary_leaf_tree.
+
+Arguments binary_leaf_tree : clear implicits.
+
+Inductive digital_list {A} :=
+  | DigitalListNil : digital_list
+  | DigitalListCons : option (binary_leaf_tree A) -> digital_list -> digital_list.
+
+Arguments digital_list : clear implicits.
+
+Inductive concrete_digital_list {A} :=
+  | ConcreteDigitalList : forall (d : nat), digital_list A -> concrete_digital_list.
+
+Arguments concrete_digital_list : clear implicits.
+\end{coq}
+
+Next we will consider operations that we can do with these type. We will define each operation on binary leaf trees, then lift it to digital lists (always having a ``depth'' argument for consistency and for reasons outlined later, even when it is not actually used), and finally to concrete digital lists.
+
+\subsection{Interpretation}
+
+The first operation will be conversion to a simple list, which at the same times gives an ``interpretation'' of the data structures, allowing us to establish a convection between the operations on them and ones on the regular lists, which means proving their correctness.
+
+To convert binary leaf tree to a list, we just traverse its leaves in their natural order.
+
+Example input:
+
+\begin{no_padding_center}
+    \begin{tikzpicture}
+        \begin{scope} [leaf_tree]
+            \node [style = {leaf_tree_inner_node}] {}
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_leaf}] {$0$}
+                    }
+                    child {
+                        node [style = {leaf_tree_leaf}] {$1$}
+                    }
+                }
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_leaf}] {$2$}
+                    }
+                    child {
+                        node [style = {leaf_tree_leaf}] {$3$}
+                    }
+                };
+        \end{scope}
+    \end{tikzpicture}
+\end{no_padding_center}
+
+Example output:
+
+\begin{no_padding_center}
+    \begin{tikzpicture}
+        \matrix (node1) [node_matrix] at (0, 0) {
+            \coqinlinelight{cons} &
+            0 &
+            \\
+        };
+        \matrix (node2) [node_matrix] at (3, 0) {
+            \coqinlinelight{cons} &
+            1 &
+            \\
+        };
+        \matrix (node3) [node_matrix] at (6, 0) {
+            \coqinlinelight{cons} &
+            2 &
+            \\
+        };
+        \matrix (node4) [node_matrix] at (9, 0) {
+            \coqinlinelight{cons} &
+            3 &
+            \\
+        };
+        \matrix (node5) [node_matrix] at (12, 0) {
+            \coqinlinelight{nil} \\
+        };
+        \draw [arrow] (node1-1-3.center) to (node2-1-1);
+        \draw [arrow] (node2-1-3.center) to (node3-1-1);
+        \draw [arrow] (node3-1-3.center) to (node4-1-1);
+        \draw [arrow] (node4-1-3.center) to (node5-1-1);
+    \end{tikzpicture}
+\end{no_padding_center}
+
+\begin{coq}
+Fixpoint binary_leaf_tree_to_list {A} (blt : binary_leaf_tree A) :=
+  match blt with
+  | BinaryLeafTreeLeaf x => [x]
+  | BinaryLeafTreeInternalNode blt'1 blt'2 =>
+    binary_leaf_tree_to_list blt'1 ++ binary_leaf_tree_to_list blt'2
+  end.
+\end{coq}
+
+\begin{coq}
+Fixpoint digital_list_to_list {A} d (dl : digital_list A) :=
+  match dl with
+  | DigitalListNil => []
+  | DigitalListCons o dl' =>
+    match o with
+    | None => []
+    | Some blt => binary_leaf_tree_to_list blt
+    end ++ digital_list_to_list (pred d) dl'
+  end.
+
+Definition concrete_digital_list_to_list {A} (cdl : concrete_digital_list A) :=
+  let '(ConcreteDigitalList d dl) := cdl in digital_list_to_list d dl.
+\end{coq}
 
 \printbibliography
 
