@@ -22,6 +22,59 @@
 \tikzstyle{leaf_tree} = [level distance = 25, level 1/.style = {sibling distance = 40}, level 2/.style = {sibling distance = 20}]
 \tikzstyle{leaf_tree_leaf} = [minimum size = 0, circle, draw]
 \tikzstyle{leaf_tree_inner_node} = [minimum size = 0, circle, draw, inner sep = 1, fill = black]
+\newcommand{\bigvarnothing}[0]{%
+    \scalebox{3}{%
+        \begin{tikzpicture}%
+            \clip (-0.114, -0.1) rectangle (0.114, 0.128);
+            \node [style = {inner sep = 0}, text = black!35] {$\varnothing$};
+        \end{tikzpicture}%
+    }%
+}
+\newcommand{\completebinaryleaftreedepthzero}[1]{%
+    \begin{tikzpicture}%
+        \begin{scope} [leaf_tree]
+            \node [style = {leaf_tree_leaf}] {#1};
+        \end{scope}
+    \end{tikzpicture}%
+}
+\newcommand{\completebinaryleaftreedepthone}[2]{%
+    \begin{tikzpicture}%
+        \begin{scope} [leaf_tree]
+            \node [style = {leaf_tree_inner_node}] {}
+                child {
+                    node [style = {leaf_tree_leaf}] {#1}
+                }
+                child {
+                    node [style = {leaf_tree_leaf}] {#2}
+                };
+        \end{scope}
+    \end{tikzpicture}%
+}
+\newcommand{\completebinaryleaftreedepthtwo}[4]{%
+    \begin{tikzpicture}%
+        \begin{scope} [leaf_tree]
+            \node [style = {leaf_tree_inner_node}] {}
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_leaf}] {#1}
+                    }
+                    child {
+                        node [style = {leaf_tree_leaf}] {#2}
+                    }
+                }
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_leaf}] {#3}
+                    }
+                    child {
+                        node [style = {leaf_tree_leaf}] {#4}
+                    }
+                };
+        \end{scope}
+    \end{tikzpicture}%
+}
 \newenvironment{no_space_center}
     {\parskip=0pt\par\nopagebreak\centering}
     {\par\noindent\ignorespacesafterend}
@@ -201,29 +254,7 @@ So another simple representation of natural numbers is the binary numeral system
 For the following, we will fix a data type \coqinline{A}. A ``complete binary leaf tree'' of depth $d$ has $2^d$ leaves where it stores values of type \coqinline{A}. Here is an example of a complete binary leaf tree of depth $2$ holding values $0$, $1$, $2$, $3$.
 
 \begin{no_padding_center}
-    \begin{tikzpicture}
-        \begin{scope} [leaf_tree]
-            \node [style = {leaf_tree_inner_node}] {}
-                child {
-                    node [style = {leaf_tree_inner_node}] {}
-                    child {
-                        node [style = {leaf_tree_leaf}] {$0$}
-                    }
-                    child {
-                        node [style = {leaf_tree_leaf}] {$1$}
-                    }
-                }
-                child {
-                    node [style = {leaf_tree_inner_node}] {}
-                    child {
-                        node [style = {leaf_tree_leaf}] {$2$}
-                    }
-                    child {
-                        node [style = {leaf_tree_leaf}] {$3$}
-                    }
-                };
-        \end{scope}
-    \end{tikzpicture}
+    \completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}
 \end{no_padding_center}
 
 We know that for each natural number $n$ there are $d \in \mathbb{N}$ and $n_{d - 1}, n_{d - 2}, ..., n_0, n_1 \in \{0, 1\}$ such that $n = n_{d - 1} 2^{d - 1} + n_{d - 2} 2^{d - 2} + ... + n_1 2^1 + n_0 2^0$. A ``digital list'' of depth $d$ is a list of length $d$ of which the $k$'th element is a complete binary leaf tree of depth $k$ if $n_k = 1$ and nothing otherwise. A ``concrete digital list'' is a $d \in \mathbb{N}$ and a digital list of depth $d$.
@@ -234,29 +265,7 @@ Here is an example of a digit list for $n = 5$, so $d = 3$, $n_2$ = 1, $n_1 = 0$
     \begin{tikzpicture}
         \matrix (node1) [node_matrix, nodes = {minimum height = 70}] at (0, 0) {
             \node (node1-1-1) [align = left] {\coqinlinelight{Digital} \\ \coqinlinelight{List} \\ \coqinlinelight{Cons}}; &
-            \begin{tikzpicture}
-                \begin{scope} [leaf_tree]
-                    \node [style = {leaf_tree_inner_node}] {}
-                        child {
-                            node [style = {leaf_tree_inner_node}] {}
-                            child {
-                                node [style = {leaf_tree_leaf}] {$0$}
-                            }
-                            child {
-                                node [style = {leaf_tree_leaf}] {$1$}
-                            }
-                        }
-                        child {
-                            node [style = {leaf_tree_inner_node}] {}
-                            child {
-                                node [style = {leaf_tree_leaf}] {$2$}
-                            }
-                            child {
-                                node [style = {leaf_tree_leaf}] {$3$}
-                            }
-                        };
-                \end{scope}
-            \end{tikzpicture} &
+            \completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$} &
             \\
         };
         \matrix (node2) [node_matrix, nodes = {minimum height = 40}] at (6, 0) {
@@ -266,11 +275,7 @@ Here is an example of a digit list for $n = 5$, so $d = 3$, $n_2$ = 1, $n_1 = 0$
         };
         \matrix (node3) [node_matrix, nodes = {minimum height = 40}] at (10, 0) {
             \node (node3-1-1) [align = left] {\coqinlinelight{Digital} \\ \coqinlinelight{List} \\ \coqinlinelight{Cons}}; &
-            \begin{tikzpicture}
-                \begin{scope} [leaf_tree]
-                    \node [style = {leaf_tree_leaf}] {$4$};
-                \end{scope}
-            \end{tikzpicture} &
+            \completebinaryleaftreedepthzero{$4$} &
             \\
         };
         \matrix (node4) [node_matrix, nodes = {minimum height = 40}] at (14, 0) {
@@ -286,38 +291,9 @@ Or, to simplify the drawing, the following notation will be used form now on:
 
 \begin{no_padding_center}
     $\xbraces{
-        \vcenter{\hbox{\begin{tikzpicture}
-            \begin{scope} [leaf_tree]
-                \node [style = {leaf_tree_inner_node}] {}
-                    child {
-                        node [style = {leaf_tree_inner_node}] {}
-                        child {
-                            node [style = {leaf_tree_leaf}] {$0$}
-                        }
-                        child {
-                            node [style = {leaf_tree_leaf}] {$1$}
-                        }
-                    }
-                    child {
-                        node [style = {leaf_tree_inner_node}] {}
-                        child {
-                            node [style = {leaf_tree_leaf}] {$2$}
-                        }
-                        child {
-                            node [style = {leaf_tree_leaf}] {$3$}
-                        }
-                    };
-            \end{scope}
-        \end{tikzpicture}}},
-        \vcenter{\hbox{\scalebox{3}{\begin{tikzpicture}
-            \clip (-0.114, -0.1) rectangle (0.114, 0.128);
-            \node [style = {inner sep = 0}, text = black!35] {$\varnothing$};
-        \end{tikzpicture}}}},
-        \vcenter{\hbox{\begin{tikzpicture}
-            \begin{scope} [leaf_tree]
-                \node [style = {leaf_tree_leaf}] {$4$};
-            \end{scope}
-        \end{tikzpicture}}}
+        \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}},
+        \vcenter{\hbox{\bigvarnothing}},
+        \vcenter{\hbox{\completebinaryleaftreedepthzero{$4$}}}
     }$
 \end{no_padding_center}
 
@@ -357,29 +333,7 @@ To convert binary leaf tree to a list, we just traverse its leaves in their natu
 Example input:
 
 \begin{no_padding_center}
-    \begin{tikzpicture}
-        \begin{scope} [leaf_tree]
-            \node [style = {leaf_tree_inner_node}] {}
-                child {
-                    node [style = {leaf_tree_inner_node}] {}
-                    child {
-                        node [style = {leaf_tree_leaf}] {$0$}
-                    }
-                    child {
-                        node [style = {leaf_tree_leaf}] {$1$}
-                    }
-                }
-                child {
-                    node [style = {leaf_tree_inner_node}] {}
-                    child {
-                        node [style = {leaf_tree_leaf}] {$2$}
-                    }
-                    child {
-                        node [style = {leaf_tree_leaf}] {$3$}
-                    }
-                };
-        \end{scope}
-    \end{tikzpicture}
+    \completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}
 \end{no_padding_center}
 
 Example output:
