@@ -19,7 +19,7 @@
 \usetikzlibrary{matrix}
 \usetikzlibrary{bending}
 \usetikzlibrary{arrows.meta}
-\tikzstyle{node_matrix} = [matrix of nodes, nodes in empty cells, nodes = {anchor = center, minimum size = 20, draw, fill = blue!10, inner sep = 4}, inner sep = 0]
+\tikzstyle{node_matrix} = [matrix of nodes, nodes in empty cells, nodes = {anchor = center, minimum size = 20, draw, fill = blue!10, inner sep = 3.333}, inner sep = 0]
 \tikzstyle{arrow} = [[-{>[length = 7, width = 5, bend]}]
 \tikzstyle{leaf_tree} = [level distance = 25, level 1/.style = {sibling distance = 40}, level 2/.style = {sibling distance = 20}]
 \tikzstyle{leaf_tree_leaf} = [minimum size = 0, circle, draw]
@@ -104,7 +104,8 @@
 \def\lxbrace{\scalerel*{\usebox{\lXbrace}}{\llbrace}}
 \def\rxbrace{\scalerel*{\usebox{\rXbrace}}{\rrbrace}}
 \newcommand{\xbraces}[1]{\scalerel[1.5ex]{\lxbrace}{#1}\scalerel*[1.5ex]{\rxbrace}{#1}}
-\newcommand{\evaluatesto}[0]{\:\scaleobj{1.5}{\leadsto}\:}
+\newcommand{\nospaceevaluatesto}[0]{\scaleobj{1.5}{\leadsto}}
+\newcommand{\evaluatesto}[0]{\:\nospaceevaluatesto\:}
 \title{Implementation and verification of a data structure using dependent types}
 \author{Anton Danilkin}
 \begin{document}
@@ -256,7 +257,17 @@ As there are many ways to represent natural numbers (and not only the unary syst
 
 So another simple representation of natural numbers is the binary numeral system. As seen, again, by Chris Okasaki \cite{okasaki_1998}, we can augment it to contain pieces of data by complete binary leaf trees in each digit of the number (although here we will use big-endian digit ordering instead of little-endian).
 
-For the following, we will fix a data type \coqinline{A}. A ``complete binary leaf tree'' of depth $d$ has $2^d$ leaves where it stores values of type \coqinline{A}. Here is an example of a complete binary leaf tree of depth $2$ holding values $0$, $1$, $2$, $3$.
+For the following, we will denote by \coqinline{A} some data type. A ``complete binary leaf tree'' of depth $d$ has $2^d$ leaves where it stores values of type \coqinline{A}.
+
+\begin{coq}
+Inductive binary_leaf_tree {A} :=
+  | BinaryLeafTreeLeaf : A -> binary_leaf_tree
+  | BinaryLeafTreeInternalNode : binary_leaf_tree -> binary_leaf_tree -> binary_leaf_tree.
+
+Arguments binary_leaf_tree : clear implicits.
+\end{coq}
+
+Here is an example of a complete binary leaf tree of depth $2$ holding values $0$, $1$, $2$, $3$:
 
 \begin{center}
     \begin{tikzpicture}
@@ -306,9 +317,19 @@ They will be drawn like that in the future:
     \completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}
 \end{center}
 
-We know that for each natural number $n$ there are $d \in \mathbb{N}$ and $n_{d - 1}, n_{d - 2}, ..., n_0, n_1 \in \{0, 1\}$ such that $n = n_{d - 1} 2^{d - 1} + n_{d - 2} 2^{d - 2} + ... + n_1 2^1 + n_0 2^0$. A ``digital list'' of depth $d$ is a list of length $d$ of which the $k$'th element is a complete binary leaf tree of depth $k$ if $n_k = 1$ and nothing otherwise. A ``concrete digital list'' is a $d \in \mathbb{N}$ and a digital list of depth $d$.
+We know that for each natural number $n$ there are $d \in \mathbb{N}$ and $n_{d - 1}, n_{d - 2}, ..., n_0, n_1 \in \{0, 1\}$ such that $n = n_{d - 1} 2^{d - 1} + n_{d - 2} 2^{d - 2} + ... + n_1 2^1 + n_0 2^0$. The function \coqinline{to_digits : forall (d n : nat), list nat} gives the list of length \coqinline{d} consisting of these binary digits of \coqinline{n} in big-endian ordering: for example, \coqinline{to_digits 8 73 ~> [0; 1; 0; 0; 1; 0; 0; 1]} (where ``\nospaceevaluatesto'' means ``evaluates to''). The inverse operation is \coqinline{from_digits : forall (d : nat) (nl : list nat), nat}: for example, \coqinline{from_digits 8 [0; 1; 0; 0; 1; 0; 0; 1] ~> 73}.
 
-Here is an example of a digit list for $n = 5$, so $d = 3$, $n_2$ = 1, $n_1 = 0$, $n_2 = 1$, which stores values 0, 1, 2, 3, 4.
+A ``digital list'' of depth $d$ is a list of length $d$ of which the $k$'th element is a complete binary leaf tree of depth $k$ if $n_k = 1$ and nothing otherwise.
+
+\begin{coq}
+Inductive digital_list {A} :=
+  | DigitalListNil : digital_list
+  | DigitalListCons : option (binary_leaf_tree A) -> digital_list -> digital_list.
+
+Arguments digital_list : clear implicits.
+\end{coq}
+
+Here is an example of a digit list for $n = 5$, so $d = 3$, $n_2$ = 1, $n_1 = 0$, $n_2 = 1$, which stores values 0, 1, 2, 3, 4:
 
 \begin{center}
     \begin{tikzpicture}
@@ -319,7 +340,7 @@ Here is an example of a digit list for $n = 5$, so $d = 3$, $n_2$ = 1, $n_1 = 0$
         };
         \matrix (node2) [node_matrix, nodes = {minimum height = 40}, anchor = west] at (6, 0) {
             \node (node2-1-1) [align = left] {\coqinlinelight{Digital} \\ \coqinlinelight{List} \\ \coqinlinelight{Cons}}; &
-            \O &
+            \bigvarnothing &
             \\
         };
         \matrix (node3) [node_matrix, nodes = {minimum height = 40}, anchor = west] at (10, 0) {
@@ -346,50 +367,44 @@ Or, to simplify the drawing, the following notation will be used form now on:
     }$
 \end{center}
 
-\subsection{Formal definitions}
-
-The function \coqinline{to_digits : forall (d n : nat), list nat} gives the list of length \coqinline{d} consisting of digits of \coqinline{i} in big-endian ordering: for example, \coqinline{to_digits 8 73 ~> [0; 1; 0; 0; 1; 0; 0; 1]}. The inverse operation is performed by \coqinline{from_digits : forall (d : nat) (nl : list nat), nat}: for example, \coqinline{from_digits 8 [0; 1; 0; 0; 1; 0; 0; 1] ~> 73}.
-
-The binary leaf tree, digits list and concrete digital list are defined as follows:
+A ``concrete digital list'' is a $d \in \mathbb{N}$ and a digital list of depth $d$ (one of the reasons to store the depth explicitly is so that it can be accessed immediately).
 
 \begin{coq}
-Inductive binary_leaf_tree {A} :=
-  | BinaryLeafTreeLeaf : A -> binary_leaf_tree
-  | BinaryLeafTreeInternalNode : binary_leaf_tree -> binary_leaf_tree -> binary_leaf_tree.
-
-Arguments binary_leaf_tree : clear implicits.
-
-Inductive digital_list {A} :=
-  | DigitalListNil : digital_list
-  | DigitalListCons : option (binary_leaf_tree A) -> digital_list -> digital_list.
-
-Arguments digital_list : clear implicits.
-
 Inductive concrete_digital_list {A} :=
   | ConcreteDigitalList : forall (d : nat), digital_list A -> concrete_digital_list.
 
 Arguments concrete_digital_list : clear implicits.
 \end{coq}
 
-Next we will consider operations that we can do with these type. We will define each operation on binary leaf trees, then lift it to digital lists (always having a ``depth'' argument for consistency and for reasons outlined later, even when it is not actually used), and finally to concrete digital lists.
+The following concrete digital list corresponding to the digital list given above:
+
+\begin{center}
+    \begin{tikzpicture}
+        \matrix (node1) [node_matrix, nodes = {minimum height = 70}, anchor = west] at (0, 0) {
+            \node (node1-1-1) [align = left] {\coqinlinelight{Concrete} \\ \coqinlinelight{Digital} \\ \coqinlinelight{List}}; &
+            $3$ &
+            $\xbraces{
+                \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}};
+                \vcenter{\hbox{\bigvarnothing}};
+                \vcenter{\hbox{\completebinaryleaftreedepthzero{$4$}}}
+            }$ \\
+        };
+    \end{tikzpicture}
+\end{center}
+
+Next we will consider operations that we can do with these types. We will define each operation on binary leaf trees, then lift it to digital lists (always having a ``depth'' argument, that corresponds to the depth of the digital list passed, for consistency and for reasons outlined later, even when it is not actually used), and finally to concrete digital lists.
 
 \subsection{Interpretation}
 
-The first operation will be conversion to a simple list, which at the same times gives an ``interpretation'' of the data structures, allowing us to establish a convection between the operations on them and ones on the regular lists, which means proving their correctness.
+The first operation will be conversion to a simple list, which at the same times gives an ``interpretation'' of the data structures, allowing us to establish a convection between the operations on them and ones on the regular lists, which means proving the correctness of these operations.
 
-To convert binary leaf tree to a list, we just traverse its leaves in their natural order.
+To convert a binary leaf tree to a list, we just traverse its leaves in their natural order. For example:
 
-Example input:
-
-\begin{no_padding_center}
-    \completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}
-\end{no_padding_center}
-
-Example output:
-
-\begin{no_padding_center}
-    $[0; 1; 2; 3]$
-\end{no_padding_center}
+\begin{center}
+    \coqinline{binary_leaf_tree_to_list}
+    $\vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}}$
+    \coqinline{~> [0; 1; 2; 3]}
+\end{center}
 
 \begin{coq}
 Fixpoint binary_leaf_tree_to_list {A} (blt : binary_leaf_tree A) :=
@@ -399,6 +414,18 @@ Fixpoint binary_leaf_tree_to_list {A} (blt : binary_leaf_tree A) :=
     binary_leaf_tree_to_list blt'1 ++ binary_leaf_tree_to_list blt'2
   end.
 \end{coq}
+
+For a digital list, we convert each binary leaf tree (if it exists) to a list and then concatenate the results. For example:
+
+\begin{center}
+    \coqinline{digital_list_to_list 3}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}};
+        \vcenter{\hbox{\bigvarnothing}};
+        \vcenter{\hbox{\completebinaryleaftreedepthzero{$4$}}}
+    }$
+    \coqinline{~> [0; 1; 2; 3; 4]}
+\end{center}
 
 \begin{coq}
 Fixpoint digital_list_to_list {A} d (dl : digital_list A) :=
@@ -410,7 +437,11 @@ Fixpoint digital_list_to_list {A} d (dl : digital_list A) :=
     | Some blt => binary_leaf_tree_to_list blt
     end ++ digital_list_to_list (pred d) dl'
   end.
+\end{coq}
 
+The version for concrete digital lists is straight-forward:
+
+\begin{coq}
 Definition concrete_digital_list_to_list {A} (cdl : concrete_digital_list A) :=
   let '(ConcreteDigitalList d dl) := cdl in digital_list_to_list d dl.
 \end{coq}
