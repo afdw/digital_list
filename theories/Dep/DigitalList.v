@@ -663,8 +663,13 @@ Qed.
 
 Section Example.
 
+About concrete_digital_list_to_list.
+
 About concrete_digital_list_empty.
 Check @concrete_digital_list_empty_correct.
+
+About concrete_digital_list_length.
+Check @concrete_digital_list_length_correct.
 
 About concrete_digital_list_nth.
 Check @concrete_digital_list_nth_correct.

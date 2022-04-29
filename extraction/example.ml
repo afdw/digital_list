@@ -27,6 +27,10 @@ module Example = functor (Dl : Digital_list.DIGITAL_LIST) -> struct
     ))
 end
 
+let _ = Printf.printf "Dependent version:\n"
+
 module Example_dep = Example(Digital_list.Dep)
+
+let _ = Printf.printf "Non-dependent version:\n"
 
 module Example_non_dep = Example(Digital_list.Non_dep)

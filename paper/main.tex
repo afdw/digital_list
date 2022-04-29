@@ -6,7 +6,6 @@
 \usepackage{amsfonts}
 \usepackage[backend=biber, style=alphabetic, sorting=none]{biblatex}
 \addbibresource{main.bib}
-\nocite{*}
 \usepackage[usenames, dvipsnames, svgnames, x11names]{xcolor}
 \usepackage{graphics}
 \usepackage{scalerel}
@@ -170,14 +169,14 @@
 \begin{no_space_center}
     \begin{minipage}{10cm}
         \maketitle
+
+        \begin{abstract}
+            We present an implementation and a proof of a purely functional data structure that combines the benefits of a list and an array. Everything is done in Coq and then extracted in OCaml. Dependent types are used to guide the thinking process, get a shorter development and more efficient extraction.
+        \end{abstract}
     \end{minipage}
 \end{no_space_center}
 
-\begin{abstract}
-    
-\end{abstract}
-
-\vspace{10cm}
+\vspace{2cm}
 
 \section{Introduction}
 
@@ -503,6 +502,17 @@ Definition concrete_digital_list_to_list {A} (cdl : concrete_digital_list A) :=
   let '(ConcreteDigitalList d dl) := cdl in digital_list_to_list d dl.
 \end{coq}
 
+\subsection{Creating an empty instance}
+
+Here we just create an empty digital list.
+
+\begin{coq}
+Definition digital_list_empty {A} : digital_list A := DigitalListNil.
+
+Definition concrete_digital_list_empty {A} : concrete_digital_list A :=
+  ConcreteDigitalList 0 digital_list_empty.
+\end{coq}
+
 \subsection{Length}
 
 The length (the number of data elements stored) of a complete binary leaf tree of depth $d$ is, as remarked earlier, $2^d$. So to get the length of a digital list, we just sum the lengths of the binary leaf trees, at positions where they are present. For example:
@@ -637,7 +647,7 @@ To see how to extract the \coqinline{i}th element, we need to know in which it i
 
 The crucial observation here is that the tree index is the index of the first digit in \coqinline{i} that is less than the corresponding digit of \coqinline{n}, and the index in the tree is just the rest of digits of \coqinline{i}.
 
-So in the case $i_{d - 1} = n_{d - 1} = 0$ (that is, \coqinline{il} starts with 0 and there is no tree in this position) and in the case $i_{d - 1} = n_{d - 1} = 1$ (that is, \coqinline{il} starts with 1 and there is a tree in this position), we recurse to our tail. Otherwise, in the case $i_{d - 1} = 0$ and $n_{d - 1} = 1$ (that is, \coqinline{il} starts with 0 and there is a tree in this position), we ask this tree for its element at position defined by \coqinline{il'}. The case $i_{d - 1} = 1$ and $n_{d - 1} = 0$ is impossible on valid input.
+So in the case $i_{d - 1} = n_{d - 1} = 0$ (that is, \coqinline{il} starts with 0 and there is no tree in this position) and in the case $i_{d - 1} = n_{d - 1} = 1$ (that is, \coqinline{il} starts with 1 and there is a tree in this position), we recurse to our tail. Otherwise, in the case $i_{d - 1} = 0$ and $n_{d - 1} = 1$ (that is, \coqinline{il} starts with 0 and there is a tree in this position), we ask this tree for its element at position defined by \coqinline{il'}. The case $i_{d - 1} = 1$ and $n_{d - 1} = 0$ is impossible on valid input.\\% bad
 
 \begin{coq}
 Fixpoint digital_list_nth_inner {A} d il (dl : digital_list A) : option A :=
@@ -936,7 +946,7 @@ The only case when we return $\varnothing$ is when the original digital list doe
     $\vcenter{\hbox{\bigvarnothing}}$
 \end{center}
 
-We do not try to maintain the minimum possible depth, so the head of the digital list can become empty.
+We do not try to maintain the minimum possible depth, so the head of the digital list can become empty.\\% bad
 
 \begin{coq}
 Fixpoint digital_list_pop {A} d (dl : digital_list A) : option (digital_list A * A) :=
@@ -963,7 +973,367 @@ Definition concrete_digital_list_pop {A} (cdl : concrete_digital_list A) :
       (digital_list_pop d dl).
 \end{coq}
 
-\pagebreak
+\section{\texttt{r}-ary dependent version}
+
+So far we have only defined functions, but did not prove them correct. But that will be complicated by the fact that our data structures can have invalid values. For example, this is representable and has type \coqinline{concrete_digital_list nat}:
+
+\begin{center}
+    \begin{tikzpicture}
+        \matrix (node1) [node_matrix, nodes = {minimum height = 70}, anchor = west] at (0, 0) {
+            \node (node1-1-1) [align = left] {\coqinlinelight{Concrete} \\ \coqinlinelight{Digital} \\ \coqinlinelight{List}}; &
+            $6322$ &
+            $\xbraces{
+                \vcenter{\hbox{\bigvarnothing}};
+                \vcenter{\hbox{\completebinaryleaftreedepthzero{$4$}}};
+                \vcenter{\hbox{\begin{tikzpicture}%
+                    \begin{scope} [leaf_tree_2]
+                        \node [style = {leaf_tree_inner_node}] {}
+                            child {
+                                node [style = {leaf_tree_inner_node}] {}
+                                child {
+                                    node [style = {leaf_tree_leaf}] {$0$}
+                                }
+                                child {
+                                    node [style = {leaf_tree_leaf}] {$1$}
+                                }
+                            }
+                            child {
+                                node [style = {leaf_tree_leaf}] {$2$}
+                            };
+                    \end{scope}
+                \end{tikzpicture}}}
+            }$ \\
+        };
+    \end{tikzpicture}
+\end{center}
+
+To fix that, we could just define predicates that asserts that the data structure are valid, and that option was also tried. But here we will explore another way to achieve what we want: dependent types, which allows to store proofs of data structure validity inside data structures themselves.
+
+One example is a ``sized list'', which is a type of lists that are guaranteed to have the length given in their type.
+
+\begin{coq}
+Inductive sized_list {A} : nat -> Type :=
+  | SizedListNil : sized_list 0
+  | SizedListCons : forall {n}, A -> sized_list n -> sized_list (S n).
+
+Arguments sized_list : clear implicits.
+
+Notation "x :||: l" := (SizedListCons x l) (at level 51, right associativity).
+
+Notation "[| |]" := SizedListNil (format "[| |]").
+Notation "[| x |]" := (SizedListCons x SizedListNil).
+Notation "[| x ; y ; .. ; z |]" := (SizedListCons x (SizedListCons y .. (SizedListCons z SizedListNil) ..)).
+\end{coq}
+
+For example, \coqinline{[|1; 2; 3|] : sized_list nat 3}.
+
+But there is another problem, that of efficiency. Storing binary trees means that a lot of memory is waisted on pointer, which also take time to access. To solve this, we can store not binary trees, but \coqinline{r}-ary trees. We call this \coqinline{r} (a natural number greater than one) the ``radix'' of the data structure. Everything we have seen so far generalizes naturally to any such radix, and not just $2$.
+
+To store something repeated number of times, we need (functional) arrays. To model them in Coq, we will just create a wrapper around sized lists and define some operations on it that forward to ones on sized lists. But we will assume this knowledge of internal representation only in proofs, and in computation contents we will only use the operations defined directly on arrays.
+
+\begin{coq}
+Inductive array {A n} :=
+  | Array : sized_list A n -> array.
+
+Arguments array : clear implicits.
+\end{coq}
+
+The definition of the type of a complete leaf tree is actually a function that computes the type consisting of nested array of given radix and depth.
+
+\begin{coq}
+Fixpoint complete_leaf_tree A r d :=
+  match d with
+  | 0 => A
+  | S d' => array (complete_leaf_tree A r d') r
+  end.
+\end{coq}
+
+For example, \coqinline{complete_leaf_tree nat 2 3 ~> array (array (array nat 2) 2) 2}. And here is an example of a term of this type:
+
+\begin{coq}
+Check
+    Array [|
+        Array [|
+            Array [|0; 1|];
+            Array [|2; 3|]
+        ];
+        Array [|
+            Array [|4; 5|];
+            Array [|6; 7|]
+        |]
+    |]
+    : complete_leaf_tree nat 2 3.
+\end{coq}
+
+The definitions of a digital list and a concrete digital list are similar to the ones seen before, but now, as promised, contain requirements that make data structures of these types always valid.
+
+\begin{coq}
+Inductive digital_list {A r} : nat -> Type :=
+  | DigitalListNil : digital_list 0
+  | DigitalListCons :
+      forall {d} k,
+      k < r ->
+      array (complete_leaf_tree A r d) k ->
+      digital_list d ->
+      digital_list (S d).
+
+Arguments digital_list : clear implicits.
+
+Inductive concrete_digital_list {A r} :=
+  | ConcreteDigitalList : forall d, digital_list A r d -> concrete_digital_list.
+
+Arguments concrete_digital_list : clear implicits.
+\end{coq}
+
+Now we define the operations on them. In the end, here is the types of ones on concrete digital lists look like:
+
+\begin{coq}
+Check concrete_digital_list_to_list : forall {A} {r}, concrete_digital_list A r -> list A.
+Check concrete_digital_list_empty : forall {A} {r}, concrete_digital_list A r.
+Check concrete_digital_list_length : forall {A} {r}, concrete_digital_list A r -> nat.
+Check concrete_digital_list_nth : forall {A} {r} (i : nat), concrete_digital_list A r -> option A.
+Check concrete_digital_list_update : forall {A} {r}, nat -> A -> concrete_digital_list A r ->
+  option (concrete_digital_list A r).
+Check concrete_digital_list_push : forall {A} {r}, A -> concrete_digital_list A r -> concrete_digital_list A r.
+Check concrete_digital_list_pop : forall {A} {r}, concrete_digital_list A r ->
+  option (concrete_digital_list A r * A).
+\end{coq}
+
+And then we show their correctness by proving that they perform the same operations as ones on corresponding regular lists. Here are the theorem statements about concrete digital lists:
+
+\begin{coq}
+Theorem concrete_digital_list_empty_correct :
+  forall {A r},
+  concrete_digital_list_to_list (concrete_digital_list_empty : concrete_digital_list A r) = [].
+
+Theorem concrete_digital_list_length_correct :
+  forall {A r} (cdl : concrete_digital_list A r),
+  concrete_digital_list_length cdl = length (concrete_digital_list_to_list cdl).
+
+Theorem concrete_digital_list_nth_correct :
+  forall {A r} i (cdl : concrete_digital_list A r),
+  r > 1 ->
+  concrete_digital_list_nth i cdl = List.nth_error (concrete_digital_list_to_list cdl) i.
+
+Theorem concrete_digital_list_update_correct :
+  forall {A r} i x (cdl : concrete_digital_list A r),
+  r > 1 ->
+  option_map concrete_digital_list_to_list (concrete_digital_list_update i x cdl) =
+    list_update i x (concrete_digital_list_to_list cdl).
+
+Theorem concrete_digital_list_push_correct :
+  forall {A r} x (cdl : concrete_digital_list A r),
+  r > 1 ->
+  concrete_digital_list_to_list (concrete_digital_list_push x cdl) =
+    concrete_digital_list_to_list cdl ++ [x].
+
+Theorem concrete_digital_list_pop_correct :
+  forall {A r} (cdl : concrete_digital_list A r),
+  r > 1 ->
+  option_map
+    (fun '(cdl0, x) => (concrete_digital_list_to_list cdl0, x))
+    (concrete_digital_list_pop cdl) = list_pop (concrete_digital_list_to_list cdl).
+\end{coq}
+
+\section{\texttt{r}-ary non-dependent version}
+
+But we can nonetheless make a non-dependent version to be able to compare it the dependent one. Here we base arrays on regular lists and not on sized lists.
+
+\begin{coq}
+Inductive array {A} :=
+  | Array : list A -> array.
+
+Arguments array : clear implicits.
+\end{coq}
+
+And here is how we define complete leaf trees, digital lists and concrete digital lists, as well as predicated of their validity:
+
+\vspace{0.5cm}% bad
+
+\begin{coq}
+Inductive leaf_tree {A} :=
+  | LeafTreeLeaf : A -> leaf_tree
+  | LeafTreeInternalNode : array leaf_tree -> leaf_tree.
+
+Arguments leaf_tree : clear implicits.
+
+Inductive leaf_tree_complete {A} r : nat -> leaf_tree A -> Prop :=
+  | LeafTreeCompleteLeaf : forall x, leaf_tree_complete r 0 (LeafTreeLeaf x)
+  | LeafTreeCompleteInternalNode :
+      forall {d} a,
+      array_length a = r ->
+      List.Forall (leaf_tree_complete r d) (array_to_list a) ->
+      leaf_tree_complete r (S d) (LeafTreeInternalNode a).
+
+Inductive digital_list {A} :=
+  | DigitalListNil : digital_list
+  | DigitalListCons : array (leaf_tree A) -> digital_list -> digital_list.
+
+Arguments digital_list : clear implicits.
+
+Inductive concrete_digital_list {A} :=
+  | ConcreteDigitalList : forall (d : nat), digital_list A -> concrete_digital_list.
+
+Arguments concrete_digital_list : clear implicits.
+
+Inductive digital_list_good {A} r : nat -> digital_list A -> Prop :=
+  | DigitalListGoodNil : digital_list_good r 0 DigitalListNil
+  | DigitalListGoodCons :
+      forall {d} (a : array (leaf_tree A)) (dl : digital_list A),
+      array_length a < r ->
+      List.Forall (leaf_tree_complete r d) (array_to_list a) ->
+      digital_list_good r d dl ->
+      digital_list_good r (S d) (DigitalListCons a dl).
+\end{coq}
+
+And how we have to not only show that the operations do indeed perform the required actions on data structures, but also that they preserve validity, so we prove 2 theorems each time. For example:
+
+\begin{coq}
+Theorem concrete_digital_list_push_correct :
+  forall {A} r x (cdl : concrete_digital_list A),
+  concrete_digital_list_good r cdl ->
+  r > 1 ->
+  concrete_digital_list_to_list r (concrete_digital_list_push r x cdl) =
+    concrete_digital_list_to_list r cdl ++ [x].
+
+Theorem concrete_digital_list_push_good :
+  forall {A} r x (cdl : concrete_digital_list A),
+  concrete_digital_list_good r cdl ->
+  r > 1 ->
+  concrete_digital_list_good r (concrete_digital_list_push r x cdl).
+\end{coq}
+
+\section{Extraction}
+
+Now we can extract what we got into OCaml, mapping functions used to standard ones where possible. For example, here is how extracted arrays (in the dependent version) are implemented as functional arrays, using normal array type of OCaml; as an array is never actually constructed or destructed directly, we can write \coqinline{assert false} in these implementations:
+
+\begin{coq}
+Extract Inductive array => "array" [ "(assert false)" ] "(assert false)".
+Extract Constant array_to_list => "fun _ a -> Array.to_list a".
+Extract Inlined Constant array_empty => "[||]".
+Extract Constant array_single => "fun x -> [|x|]".
+Extract Constant array_nth => "
+  fun _ i a ->
+    try Some a.(i)
+    with Invalid_argument _ -> None
+".
+Extract Constant array_update => "
+  fun _ i x a ->
+    let a0 = Array.copy a in
+    try
+      a0.(i) <- x;
+      Some a0
+    with Invalid_argument _ -> None
+".
+Extract Constant array_push => "
+  fun n x a ->
+    let a0 = Array.make (n + 1) x in
+    Array.blit a 0 a0 0 n;
+    a0
+".
+Extract Constant array_pop => "fun n a -> (Array.sub a 0 n, a.(n))".
+\end{coq}
+
+For the dependent and the non-dependent version, we get functions of the same types, so we can put them in a module:
+
+\begin{coq}
+module type DIGITAL_LIST = sig
+  type 'a concrete_digital_list
+  val concrete_digital_list_to_list : int -> 'a concrete_digital_list -> 'a list
+  val concrete_digital_list_length : int -> 'a concrete_digital_list -> int
+  val concrete_digital_list_empty : int -> 'a concrete_digital_list
+  val concrete_digital_list_nth : int -> int -> 'a concrete_digital_list -> 'a option
+  val concrete_digital_list_update : int -> int -> 'a -> 'a concrete_digital_list -> 'a concrete_digital_list option
+  val concrete_digital_list_push : int -> 'a -> 'a concrete_digital_list -> 'a concrete_digital_list
+  val concrete_digital_list_pop : int -> 'a concrete_digital_list -> ('a concrete_digital_list * 'a) option
+end
+\end{coq}
+
+Then we can write a test program, that does some operations on each implementation and outputs some statistics on memory usage:
+
+\begin{coq}
+let time l =
+  let t = Sys.time() in
+  let v = Lazy.force l in
+  Printf.printf "Execution time: %fs\n" (Sys.time() -. t);
+  flush stdout;
+  v
+
+module Example = functor (Dl : Digital_list.DIGITAL_LIST) -> struct
+  open Dl
+
+  let main =
+    time (lazy (
+      let r = 32 in
+      let cdl = concrete_digital_list_empty r |> ref in
+      for _ = 0 to 10000000 do
+        cdl := !cdl |> concrete_digital_list_push r 0
+      done;
+      for i = 0 to (!cdl |> concrete_digital_list_length r) - 1 do
+        cdl := !cdl |> concrete_digital_list_update r i (i mod 123) |> Option.get
+      done;
+      let a = Array.make (!cdl |> concrete_digital_list_length r) 0 in
+      for i = 0 to (!cdl |> concrete_digital_list_length r) - 1 do
+        a.(i) <- !cdl |> concrete_digital_list_nth r i |> Option.get
+      done;
+      Printf.printf "Raw data size (after serialization): %f MiB\n" ((Marshal.to_bytes a [] |> Bytes.length |> float_of_int) /. 1024.0 /. 1024.0);
+      Printf.printf "Data structure size (after serialization): %f MiB\n" ((Marshal.to_bytes !cdl [] |> Bytes.length |> float_of_int) /. 1024.0 /. 1024.0)
+    ))
+end
+
+let _ = Printf.printf "Dependent version:\n"
+
+module Example_dep = Example(Digital_list.Dep)
+
+let _ = Printf.printf "Non-dependent version:\n"
+
+module Example_non_dep = Example(Digital_list.Non_dep)
+\end{coq}
+
+Here is the output of one particular execution:
+
+\begin{coq}
+Dependent version:
+Raw data size (after serialization): 14.111297 MiB
+Data structure size (after serialization): 15.649498 MiB
+Execution time: 8.290652s
+Non-dependent version:
+Raw data size (after serialization): 14.111297 MiB
+Data structure size (after serialization): 25.493868 MiB
+Execution time: 11.857548s
+\end{coq}
+
+Even thought this way of measuring data structure size is very crude, we can still still the the extraction of the dependent version works faster and uses less memory than the non-dependent one. The reason is that the non-dependent version needs more indirections when storing leaf trees, which are bad for performance and memory footprint.
+
+An interesting remark is that the extraction of the dependent version contains some unsafe casts (\coqinline{Obj.magic}), as otherwise the polymorphic recursion used would be hard or impossible to do in OCaml directly. But that is fine, because we have proved that everything is correct at the time of defining terms (as they type check, by correctness of extraction the end result should not perform any wrong casts). And otherwise, by writing OCaml code directly, will would not have such guarantees, meaning that there can be unexpected bugs or even security vulnerabilities if \coqinline{Obj.magic} was used wrongly.
+
+\section{Methodology}
+
+First, the \coqinline{r}-ary dependent version was done, from it the the \coqinline{r}-ary non-dependent one was obtained, and finally it was specialized for \coqinline{r = 2} to get the binary non-dependent version.
+
+Using dependent types means that the functions that performs operations have to be decorated with proofs, but that is, in some sense, a good thing: this catches a lot of mistakes (as it limits what it possible to write, it is harder to constructed wrong expressions); it took some time to construct the terms of the functions, but the first time it type checked, it was already correct.
+
+Here are some statics on development sizes:
+
+\begin{center}
+    \begin{tabular}{|l|r|}
+        \hline
+        Common code & 426 lines \\
+        \hline
+        \coqinlinelight{r}-ary dependent version & 1030 lines \\
+        \hline
+        \coqinlinelight{r}-ary non-dependent version & 1107 lines \\
+        \hline
+    \end{tabular}
+\end{center}
+
+We can see that the non-dependent version turned out to be longed, but this maybe due to the fact that is was adapted from the dependent one and not done directly.
+
+The benefit of the non-dependent version is that the implementations of operations are more readable, because they are not cluttered with proofs.
+
+\section{Related work}
+
+There are other developments similar to the one described here exists, notably proofs of binary random access lists \cite{cfml_binary_random_access_lists} and finger trees \cite{cfml_finger_trees} by Arthur Charguéraud. The notable difference is that the implementations are written in OCaml, and then they are extracted and proved in Coq using the CFML framework \cite{cfml}, where as this development was done in Coq and then extracted in OCaml (so in the opposite direction).
 
 \printbibliography
 
