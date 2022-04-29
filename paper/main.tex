@@ -21,9 +21,17 @@
 \usetikzlibrary{arrows.meta}
 \tikzstyle{node_matrix} = [matrix of nodes, nodes in empty cells, nodes = {anchor = center, minimum size = 20, draw, fill = blue!10, inner sep = 3.333}, inner sep = 0]
 \tikzstyle{arrow} = [[-{>[length = 7, width = 5, bend]}]
-\tikzstyle{leaf_tree} = [level distance = 25, level 1/.style = {sibling distance = 40}, level 2/.style = {sibling distance = 20}]
+\tikzstyle{leaf_tree_0} = [level distance = 25]
+\tikzstyle{leaf_tree_1} = [level distance = 25, level 1/.style = {sibling distance = 20}]
+\tikzstyle{leaf_tree_2} = [level distance = 25, level 1/.style = {sibling distance = 40}, level 2/.style = {sibling distance = 20}]
+\tikzstyle{leaf_tree_3} = [level distance = 25, level 1/.style = {sibling distance = 80}, level 2/.style = {sibling distance = 40}, level 3/.style = {sibling distance = 20}]
 \tikzstyle{leaf_tree_leaf} = [minimum size = 0, circle, draw]
 \tikzstyle{leaf_tree_inner_node} = [minimum size = 0, circle, draw, inner sep = 1, fill = black]
+\newcommand{\spacer}[0]{%
+    \begin{tikzpicture}%
+        \clip (0, 0) rectangle (0.001, 0.5);
+    \end{tikzpicture}%
+}
 \newcommand{\bigvarnothing}[0]{%
     \scalebox{3}{%
         \begin{tikzpicture}%
@@ -34,14 +42,14 @@
 }
 \newcommand{\completebinaryleaftreedepthzero}[1]{%
     \begin{tikzpicture}%
-        \begin{scope} [leaf_tree]
+        \begin{scope} [leaf_tree_0]
             \node [style = {leaf_tree_leaf}] {#1};
         \end{scope}
     \end{tikzpicture}%
 }
 \newcommand{\completebinaryleaftreedepthone}[2]{%
     \begin{tikzpicture}%
-        \begin{scope} [leaf_tree]
+        \begin{scope} [leaf_tree_1]
             \node [style = {leaf_tree_inner_node}] {}
                 child {
                     node [style = {leaf_tree_leaf}] {#1}
@@ -54,7 +62,7 @@
 }
 \newcommand{\completebinaryleaftreedepthtwo}[4]{%
     \begin{tikzpicture}%
-        \begin{scope} [leaf_tree]
+        \begin{scope} [leaf_tree_2]
             \node [style = {leaf_tree_inner_node}] {}
                 child {
                     node [style = {leaf_tree_inner_node}] {}
@@ -72,6 +80,55 @@
                     }
                     child {
                         node [style = {leaf_tree_leaf}] {#4}
+                    }
+                };
+        \end{scope}
+    \end{tikzpicture}%
+}
+\newcommand{\completebinaryleaftreedepththree}[8]{%
+    \begin{tikzpicture}%
+        \begin{scope} [leaf_tree_3]
+            \node [style = {leaf_tree_inner_node}] {}
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {#1}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {#2}
+                        }
+                    }
+                    child {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {#3}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {#4}
+                        }
+                    }
+                }
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {#5}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {#6}
+                        }
+                    }
+                    child {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {#7}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {#8}
+                        }
                     }
                 };
         \end{scope}
@@ -128,7 +185,7 @@ One of the most important data structures in functional programming are singly l
 
 The problem of lists is that the operation of retrieving or updating an element at a specific index has linear spacial complexity in term of the size. On the flip side, operations on arrays and vectors mutate the instance they work on, which not only makes reasoning about program behavior harder, but also means that older versions of the data structure become unaccessible for future use. One way to fix that would be making a copy before each operation, but that again would mean that everything would have linear complexity.
 
-For these reasons, the following question arises: is it possible to have a data structure that combines the benefits of singly linked lists and vectors?
+For these reasons, the following question arises: is it possible to design a data structure that combines the benefits of singly linked lists and vectors?
 
 \section{Similarities between numbers and lists}
 
@@ -251,13 +308,13 @@ Fixpoint repeat {A} (x : A) (n : nat) : list A :=
     \end{tabular}
 \end{no_padding_center}
 
-\section{Binary version}
+\section{Binary non-dependent version}
 
 As there are many ways to represent natural numbers (and not only the unary system that was considered above). Depending on which representation we chose, operations on the numbers (such as increment, decrement, sum, converting into other representations) will have different efficiency, and in each case we can find an analogous data structure.
 
 So another simple representation of natural numbers is the binary numeral system. As seen, again, by Chris Okasaki \cite{okasaki_1998}, we can augment it to contain pieces of data by complete binary leaf trees in each digit of the number (although here we will use big-endian digit ordering instead of little-endian).
 
-For the following, we will denote by \coqinline{A} some data type. A ``complete binary leaf tree'' of depth $d$ has $2^d$ leaves where it stores values of type \coqinline{A}.
+For the following, we will denote by \coqinline{A} some data type (in examples in will be \coqinline{nat}). A ``complete binary leaf tree'' of depth $d$ has $2^d$ leaves where it stores values of type \coqinline{A} (``complete binary'' meaning that each internal node has exactly 2 children, ``leaf'' meaning that data is only stores in the leaves).
 
 \begin{coq}
 Inductive binary_leaf_tree {A} :=
@@ -317,7 +374,7 @@ They will be drawn like that in the future:
     \completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}
 \end{center}
 
-We know that for each natural number $n$ there are $d \in \mathbb{N}$ and $n_{d - 1}, n_{d - 2}, ..., n_0, n_1 \in \{0, 1\}$ such that $n = n_{d - 1} 2^{d - 1} + n_{d - 2} 2^{d - 2} + ... + n_1 2^1 + n_0 2^0$. The function \coqinline{to_digits : forall (d n : nat), list nat} gives the list of length \coqinline{d} consisting of these binary digits of \coqinline{n} in big-endian ordering: for example, \coqinline{to_digits 8 73 ~> [0; 1; 0; 0; 1; 0; 0; 1]} (where ``\nospaceevaluatesto'' means ``evaluates to''). The inverse operation is \coqinline{from_digits : forall (d : nat) (nl : list nat), nat}: for example, \coqinline{from_digits 8 [0; 1; 0; 0; 1; 0; 0; 1] ~> 73}.
+We know that for each natural number $n$ there are $d \in \mathbb{N}$ and $n_{d - 1}, n_{d - 2}, ..., n_0, n_1 \in \{0, 1\}$ such that $n = n_{d - 1} 2^{d - 1} + n_{d - 2} 2^{d - 2} + ... + n_1 2^1 + n_0 2^0$. The function \coqinline{to_digits : forall (d n : nat), list nat} gives the list of length \coqinline{d} consisting of these binary digits of \coqinline{n} in big-endian ordering: for example, \coqinline{to_digits 8 73 ~> [0; 1; 0; 0; 1; 0; 0; 1]} (where ``\nospaceevaluatesto'' means ``evaluates to''). The inverse operation is \coqinline{of_digits : forall (d : nat) (nl : list nat), nat}: for example, \coqinline{of_digits 8 [0; 1; 0; 0; 1; 0; 0; 1] ~> 73}.
 
 A ``digital list'' of depth $d$ is a list of length $d$ of which the $k$'th element is a complete binary leaf tree of depth $k$ if $n_k = 1$ and nothing otherwise.
 
@@ -376,7 +433,7 @@ Inductive concrete_digital_list {A} :=
 Arguments concrete_digital_list : clear implicits.
 \end{coq}
 
-The following concrete digital list corresponding to the digital list given above:
+The following concrete digital list corresponds to the digital list given above:
 
 \begin{center}
     \begin{tikzpicture}
@@ -392,7 +449,7 @@ The following concrete digital list corresponding to the digital list given abov
     \end{tikzpicture}
 \end{center}
 
-Next we will consider operations that we can do with these types. We will define each operation on binary leaf trees, then lift it to digital lists (always having a ``depth'' argument, that corresponds to the depth of the digital list passed, for consistency and for reasons outlined later, even when it is not actually used), and finally to concrete digital lists.
+Next we will consider operations that we can do with these types. We will first define each operation on binary leaf trees, then lift it to digital lists (always having a ``depth'' argument, which corresponds to the depth of the digital list passed, for consistency and for reasons outlined later, even when it is not actually used), and finally to concrete digital lists.
 
 \subsection{Interpretation}
 
@@ -445,6 +502,468 @@ The version for concrete digital lists is straight-forward:
 Definition concrete_digital_list_to_list {A} (cdl : concrete_digital_list A) :=
   let '(ConcreteDigitalList d dl) := cdl in digital_list_to_list d dl.
 \end{coq}
+
+\subsection{Length}
+
+The length (the number of data elements stored) of a complete binary leaf tree of depth $d$ is, as remarked earlier, $2^d$. So to get the length of a digital list, we just sum the lengths of the binary leaf trees, at positions where they are present. For example:
+
+\begin{center}
+    \coqinline{digital_list_length 3}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}};
+        \vcenter{\hbox{\bigvarnothing}};
+        \vcenter{\hbox{\completebinaryleaftreedepthzero{$4$}}}
+    }$
+    \coqinline{~> 5}
+\end{center}
+
+\begin{coq}
+Fixpoint digital_list_length {A} d (dl : digital_list A) :=
+  match dl with
+  | DigitalListNil => 0
+  | DigitalListCons o dl' => (if o then Nat.pow 2 (pred d) else 0) + digital_list_length (pred d) dl'
+  end.
+
+Definition concrete_digital_list_length {A} (cdl : concrete_digital_list A) :=
+  let '(ConcreteDigitalList d dl) := cdl in digital_list_length d dl.
+\end{coq}
+
+\subsection{Getting an element by its index}
+
+The operation of getting the \coqinline{i}th element is a bit more involved. In all cases, we first convert \coqinline{i} to list of its binary digits, called \coqinline{il} (it has the same length as the depth of the data structure we work with).
+
+Then all we need to do for a complete binary leaf tree is to descent it, starting from the root, taking the left branch if the digit in current position is $0$ and the right one if the digit in current position is $1$. For example, suppose we want to get the $6$'th element of the following tree; for that we first convert it to digits (\coqinline{to_digits 3 6 ~> [1; 1; 0]}, where $3$ is the depth of the tree), and then visit the tree as described (the path is highlighted in red):
+
+\begin{center}
+    \coqinline{complete_binary_leaf_tree_nth 3 [1; 1; 0]}
+    $\vcenter{\hbox{\begin{tikzpicture}
+        \begin{scope} [leaf_tree_3]
+            \node [style = {leaf_tree_inner_node}] {}
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {0}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {1}
+                        }
+                    }
+                    child {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {2}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {3}
+                        }
+                    }
+                }
+                child {
+                    node [style = {leaf_tree_inner_node}] {}
+                    child[black, thin] {
+                        node [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {4}
+                        }
+                        child {
+                            node [style = {leaf_tree_leaf}] {5}
+                        }
+                    }
+                    child {
+                        node[black, thin] [style = {leaf_tree_inner_node}] {}
+                        child {
+                            node [style = {leaf_tree_leaf}] {6}
+                        }
+                        child[black, thin] {
+                            node [style = {leaf_tree_leaf}] {7}
+                        }
+                        edge from parent[red, thick]
+                    }
+                    edge from parent[red, thick]
+                };
+        \end{scope}
+    \end{tikzpicture}}}$
+    \coqinline{~> 6}
+\end{center}
+
+In this case we suppose that all arguments are valid, but we still have to return option, as we need to return something in all cases.
+
+\begin{coq}
+Fixpoint complete_binary_leaf_tree_nth {A} d il (blt : binary_leaf_tree A) : option A :=
+  match il, blt with
+  | [], BinaryLeafTreeLeaf x => Some x
+  | 0 :: il', BinaryLeafTreeInternalNode blt'1 _ => complete_binary_leaf_tree_nth (pred d) il' blt'1
+  | 1 :: il', BinaryLeafTreeInternalNode _ blt'2 => complete_binary_leaf_tree_nth (pred d) il' blt'2
+  | _, _ => None
+  end.
+\end{coq}
+
+Now, consider the following digital list:
+
+\begin{center}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepththree{$0$}{$1$}{$2$}{$3$}{$4$}{$5$}{$6$}{$7$}}};
+        \vcenter{\hbox{\bigvarnothing}};
+        \vcenter{\hbox{\completebinaryleaftreedepthone{$8$}{$9$}}};
+        \vcenter{\hbox{\completebinaryleaftreedepthzero{$10$}}}
+    }$
+\end{center}
+
+To see how to extract the \coqinline{i}th element, we need to know in which it is stored at which index. Let us see on this example what we get:
+
+\begin{center}
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Element index} & \textbf{Tree index} & \textbf{Index in tree} \\
+        \hline
+        $\textcolor{red}{0}000_2$ & $\textcolor{red}{0}$ & $000_2$ \\
+        $\textcolor{red}{0}001_2$ & $\textcolor{red}{0}$ & $001_2$ \\
+        $\textcolor{red}{0}010_2$ & $\textcolor{red}{0}$ & $010_2$ \\
+        $\textcolor{red}{0}011_2$ & $\textcolor{red}{0}$ & $011_2$ \\
+        $\textcolor{red}{0}100_2$ & $\textcolor{red}{0}$ & $100_2$ \\
+        $\textcolor{red}{0}101_2$ & $\textcolor{red}{0}$ & $101_2$ \\
+        $\textcolor{red}{0}110_2$ & $\textcolor{red}{0}$ & $110_2$ \\
+        $\textcolor{red}{0}111_2$ & $\textcolor{red}{0}$ & $111_2$ \\
+        $10\textcolor{teal}{0}0_2$ & $\textcolor{teal}{2}$ & $0_2$ \\
+        $10\textcolor{teal}{0}1_2$ & $\textcolor{teal}{2}$ & $1_2$ \\
+        $101\textcolor{blue}{0}_2$ & $\textcolor{blue}{3}$ & $\varepsilon_2$ \\
+        \hline
+        $\textcolor{red}{1}0\textcolor{teal}{1}\textcolor{blue}{1}_2$ & \multicolumn{2}{|c|}{$\leftarrow$ \textbf{Count of elements in whole digital list}} \\
+        \hline
+    \end{tabular}
+\end{center}
+
+The crucial observation here is that the tree index is the index of the first digit in \coqinline{i} that is less than the corresponding digit of \coqinline{n}, and the index in the tree is just the rest of digits of \coqinline{i}.
+
+So in the case $i_{d - 1} = n_{d - 1} = 0$ (that is, \coqinline{il} starts with 0 and there is no tree in this position) and in the case $i_{d - 1} = n_{d - 1} = 1$ (that is, \coqinline{il} starts with 1 and there is a tree in this position), we recurse to our tail. Otherwise, in the case $i_{d - 1} = 0$ and $n_{d - 1} = 1$ (that is, \coqinline{il} starts with 0 and there is a tree in this position), we ask this tree for its element at position defined by \coqinline{il'}. The case $i_{d - 1} = 1$ and $n_{d - 1} = 0$ is impossible on valid input.
+
+\begin{coq}
+Fixpoint digital_list_nth_inner {A} d il (dl : digital_list A) : option A :=
+  match il, dl with
+  | 0 :: il', DigitalListCons None dl'
+  | 1 :: il', DigitalListCons (Some _) dl' => digital_list_nth_inner (pred d) il' dl'
+  | 0 :: il', DigitalListCons (Some blt) dl' => complete_binary_leaf_tree_nth (pred d) il' blt
+  | _, _ => None
+  end.
+\end{coq}
+
+All that is left now is to check whether \coqinline{i} is in bounds (to get a functions that works on and \coqinline{i}) and to convert it into digits.
+
+\begin{coq}
+Definition digital_list_nth {A} d i (dl : digital_list A) : option A :=
+  if Nat.ltb i (digital_list_length d dl)
+  then digital_list_nth_inner d (to_digits d i) dl
+  else None.
+
+Definition concrete_digital_list_nth {A} i (cdl : concrete_digital_list A) : option A :=
+  let '(ConcreteDigitalList d dl) := cdl in digital_list_nth d i dl.
+\end{coq}
+
+\subsection{Updating an element by its index}
+
+The operation of replacing the \coqinline{i}th element by another \coqinline{x : A} is completely analogous to getting the \coqinline{i}th element, the only difference is that we reconstruct back the data structures with the element updated.
+
+\begin{coq}
+Fixpoint complete_binary_leaf_tree_update {A} d il x (blt : binary_leaf_tree A) :
+  option (binary_leaf_tree A) :=
+  match il, blt with
+  | [], _ => Some (BinaryLeafTreeLeaf x)
+  | 0 :: il', BinaryLeafTreeInternalNode blt'1 blt'2 =>
+    option_map
+      (fun blt'1_0 => BinaryLeafTreeInternalNode blt'1_0 blt'2)
+      (complete_binary_leaf_tree_update (pred d) il' x blt'1)
+  | 1 :: il', BinaryLeafTreeInternalNode blt'1 blt'2 =>
+    option_map
+      (fun blt'2_0 => BinaryLeafTreeInternalNode blt'1 blt'2_0)
+      (complete_binary_leaf_tree_update (pred d) il' x blt'2)
+  | _, _ => None
+  end.
+
+Fixpoint digital_list_update_inner {A} d il x (dl : digital_list A) : option (digital_list A) :=
+  match il, dl with
+  | 0 :: il', DigitalListCons (None as o) dl'
+  | 1 :: il', DigitalListCons (Some _ as o) dl' =>
+    option_map
+      (DigitalListCons o)
+      (digital_list_update_inner (pred d) il' x dl')
+  | 0 :: il', DigitalListCons (Some blt) dl' =>
+    Some (DigitalListCons (complete_binary_leaf_tree_update (pred d) il' x blt) dl')
+  | _, _ => None
+  end.
+
+Definition digital_list_update {A} d i x (dl : digital_list A) : option (digital_list A) :=
+  if Nat.ltb i (digital_list_length d dl)
+  then digital_list_update_inner d (to_digits d i) x dl
+  else None.
+
+Definition concrete_digital_list_update {A} i x (cdl : concrete_digital_list A) :
+  option (concrete_digital_list A) :=
+  let '(ConcreteDigitalList d dl) := cdl in
+    option_map (ConcreteDigitalList d) (digital_list_update d i x dl).
+\end{coq}
+
+\subsection{Adding an element to the end}
+
+Adding an element \coqinline{x : A} to the end of a digital list of depth \coqinline{d} can potentially produce a carry (a complete binary leaf tree of depth \coqinline{d}) and always gives a digital list of the same depth \coqinline{d}.
+
+If the initial digital list is of depth $0$, we output a carry with the element $x$. For example:
+
+\begin{center}
+    \coqinline{digital_list_push 0 8}
+    $\xbraces{
+        \vcenter{\hbox{\spacer}}
+    }$
+    \evaluatesto
+    $\left(
+        \,\vcenter{\hbox{\completebinaryleaftreedepthzero{$8$}}}\,,
+        \xbraces{
+            \vcenter{\hbox{\spacer}}
+        }
+    \right)$
+\end{center}
+
+Else, we recurse. Suppose that we did not get a carry. In this case, we just add our digit (if it exists) to the result of the recursive call. For example, if the recursive call looked like this:
+
+\begin{center}
+    \coqinline{digital_list_push 2 8}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepthone{$4$}{$5$}}};
+        \vcenter{\hbox{\bigvarnothing}}
+    }$
+    \evaluatesto
+    $\left(
+        \vcenter{\hbox{\bigvarnothing}}\,,
+        \xbraces{
+            \vcenter{\hbox{\completebinaryleaftreedepthone{$4$}{$5$}}};
+            \vcenter{\hbox{\completebinaryleaftreedepthzero{$8$}}}
+        }
+    \right)$
+\end{center}
+
+Then the parent execution can be the following:
+
+\begin{center}
+    \coqinline{digital_list_push 3 8}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}};
+        \vcenter{\hbox{\completebinaryleaftreedepthone{$4$}{$5$}}};
+        \vcenter{\hbox{\bigvarnothing}}
+    }$
+    \evaluatesto
+    $\left(
+        \vcenter{\hbox{\bigvarnothing}}\,,
+        \xbraces{
+            \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}};
+            \vcenter{\hbox{\completebinaryleaftreedepthone{$4$}{$5$}}};
+            \vcenter{\hbox{\completebinaryleaftreedepthzero{$8$}}}
+        }
+    \right)$
+\end{center}
+
+Else there was a carry. And again, the are two cases, depending on whether or not the head of the digital list contains a tree. If it does not, we just add the carry that we got in this place. For example, if the recursive call looked like this:
+
+\begin{center}
+    \coqinline{digital_list_push 2 8}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepthone{$0$}{$1$}}};
+        \vcenter{\hbox{\completebinaryleaftreedepthzero{$2$}}}
+    }$
+    \evaluatesto
+    $\left(
+        \,\vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$8$}}}\,,
+        \xbraces{
+            \vcenter{\hbox{\bigvarnothing}};
+            \vcenter{\hbox{\bigvarnothing}}
+        }
+    \right)$
+\end{center}
+
+Then the parent execution can be the following:
+
+\begin{center}
+    \coqinline{digital_list_push 3 8}
+    $\xbraces{
+        \vcenter{\hbox{\bigvarnothing}};
+        \vcenter{\hbox{\completebinaryleaftreedepthone{$0$}{$1$}}};
+        \vcenter{\hbox{\completebinaryleaftreedepthzero{$2$}}}
+    }$
+    \evaluatesto
+    $\left(
+        \vcenter{\hbox{\bigvarnothing}}\,,
+        \xbraces{
+            \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$8$}}};
+            \vcenter{\hbox{\bigvarnothing}};
+            \vcenter{\hbox{\bigvarnothing}}
+        }
+    \right)$
+\end{center}
+
+But if the head of the list contains a tree, then we create a tree from it and the carry and return it again as a carry. For example, if the recursive call looked like this:
+
+\begin{center}
+    \coqinline{digital_list_push 1 8}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepthzero{$2$}}}
+    }$
+    \evaluatesto
+    $\left(
+        \,\vcenter{\hbox{\completebinaryleaftreedepthone{$2$}{$8$}}}\,,
+        \xbraces{
+            \vcenter{\hbox{\bigvarnothing}}
+        }
+    \right)$
+\end{center}
+
+Then the parent execution can be the following:
+
+\begin{center}
+    \coqinline{digital_list_push 2 8}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepthone{$0$}{$1$}}};
+        \vcenter{\hbox{\completebinaryleaftreedepthzero{$2$}}}
+    }$
+    \evaluatesto
+    $\left(
+        \,\vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$8$}}}\,,
+        \xbraces{
+            \vcenter{\hbox{\bigvarnothing}};
+            \vcenter{\hbox{\bigvarnothing}}
+        }
+    \right)$
+\end{center}
+
+We can remark an analogy with binary adders:
+
+\begin{center}
+    \begin{tabular}{|c|c||c|c|}
+        \hline
+        \textbf{First operand} & \textbf{Second operand} & \textbf{Carry} & \textbf{Result} \\
+        \hline
+        $0$ & $0$ & $0$ & $0$ \\
+        $0$ & $1$ & $0$ & $1$ \\
+        $1$ & $0$ & $0$ & $1$ \\
+        $1$ & $1$ & $1$ & $0$ \\
+        \hline
+    \end{tabular}
+\end{center}
+
+\begin{coq}
+Fixpoint digital_list_push {A} d x (dl : digital_list A) : option (binary_leaf_tree A) * (digital_list A) :=
+  match dl with
+  | DigitalListNil => (Some (BinaryLeafTreeLeaf x), DigitalListNil)
+  | DigitalListCons o dl' =>
+    match digital_list_push (pred d) x dl' with
+    | (None, dl'0) => (None, DigitalListCons o dl'0)
+    | (Some blt0, dl'0) =>
+      match o with
+      | None => (None, DigitalListCons (Some blt0) dl'0)
+      | Some blt => (Some (BinaryLeafTreeInternalNode blt blt0), DigitalListCons None dl'0)
+      end
+    end
+  end.
+\end{coq}
+
+To get a concrete digital list from an optional carry and the resulting digital list, we add the carry to the head of the digital list if it exists (and get a digital list of depth one more than the original), if not, then just return the digital list from the operation.
+
+\begin{coq}
+Definition concrete_digital_list_push {A} x (cdl : concrete_digital_list A) : concrete_digital_list A :=
+  let '(ConcreteDigitalList d dl) := cdl in
+    match digital_list_push d x dl with
+    | (None, dl0) => ConcreteDigitalList d dl0
+    | (Some blt0, dl0) => ConcreteDigitalList (S d) (DigitalListCons (Some blt0) dl0)
+    end.
+\end{coq}
+
+\subsection{Removing an element from the end}
+
+To remove the last element from a complete binary leaf tree, we split it into a digital list and this element. For example:
+
+\begin{center}
+    \coqinline{complete_binary_leaf_tree_pop}
+    $\vcenter{\hbox{\completebinaryleaftreedepththree{$0$}{$1$}{$2$}{$3$}{$4$}{$5$}{$6$}{$7$}}}$
+    \evaluatesto
+    $\left(
+        \xbraces{
+            \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}};
+            \vcenter{\hbox{\completebinaryleaftreedepthone{$4$}{$5$}}};
+            \vcenter{\hbox{\completebinaryleaftreedepthzero{$6$}}}
+        },
+        7
+    \right)$
+\end{center}
+
+\begin{coq}
+Fixpoint complete_binary_leaf_tree_pop {A} d (blt : binary_leaf_tree A) : digital_list A * A :=
+  match blt with
+  | BinaryLeafTreeLeaf x => (DigitalListNil, x)
+  | BinaryLeafTreeInternalNode blt'1 blt'2 =>
+    let '(dl', x) := complete_binary_leaf_tree_pop (pred d) blt'2 in
+      (DigitalListCons (Some blt'1) dl', x)
+  end.
+\end{coq}
+
+To remove the last element of a digital list, we just recurse until we are at the last existing tree, from which we remove the element from the end, and then reconstruct back the digital list, leaving unchanged all of the previous trees. For example:
+
+\begin{center}
+    \coqinline{digital_list_pop 3 8}
+    $\xbraces{
+        \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}};
+        \vcenter{\hbox{\completebinaryleaftreedepthone{$4$}{$5$}}};
+        \vcenter{\hbox{\bigvarnothing}}
+    }$
+    \evaluatesto
+    $\left(
+        \xbraces{
+            \vcenter{\hbox{\completebinaryleaftreedepthtwo{$0$}{$1$}{$2$}{$3$}}};
+            \vcenter{\hbox{\bigvarnothing}};
+            \vcenter{\hbox{\completebinaryleaftreedepthzero{$4$}}}
+        },
+        5
+    \right)$
+\end{center}
+
+The only case when we return $\varnothing$ is when the original digital list does not contain trees. For example:
+
+\begin{center}
+    \coqinline{digital_list_pop 2 8}
+    $\xbraces{
+        \vcenter{\hbox{\bigvarnothing}};
+        \vcenter{\hbox{\bigvarnothing}}
+    }$
+    \evaluatesto
+    $\vcenter{\hbox{\bigvarnothing}}$
+\end{center}
+
+We do not try to maintain the minimum possible depth, so the head of the digital list can become empty.
+
+\begin{coq}
+Fixpoint digital_list_pop {A} d (dl : digital_list A) : option (digital_list A * A) :=
+  match dl with
+  | DigitalListNil => None
+  | DigitalListCons o dl' =>
+    match digital_list_pop (pred d) dl' with
+    | None =>
+      option_map
+        (fun blt =>
+          let '(dl'0, x) := complete_binary_leaf_tree_pop (pred d) blt in
+            (DigitalListCons None dl'0, x)
+        )
+        o
+    | Some (dl'0, x) => Some (DigitalListCons o dl'0, x)
+    end
+  end.
+
+Definition concrete_digital_list_pop {A} (cdl : concrete_digital_list A) :
+  option (concrete_digital_list A * A) :=
+  let '(ConcreteDigitalList d dl) := cdl in
+    option_map
+      (fun '(dl0, x) => (ConcreteDigitalList d dl0, x))
+      (digital_list_pop d dl).
+\end{coq}
+
+\pagebreak
 
 \printbibliography
 

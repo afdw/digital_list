@@ -46,26 +46,11 @@ Definition concrete_digital_list_length {A} (cdl : concrete_digital_list A) :=
   let '(ConcreteDigitalList d dl) := cdl in digital_list_length d dl.
 
 Fixpoint complete_binary_leaf_tree_nth {A} d il (blt : binary_leaf_tree A) : option A :=
-  match d with
-  | 0 =>
-    match blt with
-    | BinaryLeafTreeLeaf x => Some x
-    | BinaryLeafTreeInternalNode _ _ => None
-    end
-  | S d' =>
-    match il with
-    | [] => None
-    | i :: il' =>
-      match blt with
-      | BinaryLeafTreeLeaf _ => None
-      | BinaryLeafTreeInternalNode blt'1 blt'2 =>
-        match i with
-        | 0 => complete_binary_leaf_tree_nth d' il' blt'1
-        | 1 => complete_binary_leaf_tree_nth d' il' blt'2
-        | _ => None
-        end
-      end
-    end
+  match il, blt with
+  | [], BinaryLeafTreeLeaf x => Some x
+  | 0 :: il', BinaryLeafTreeInternalNode blt'1 _ => complete_binary_leaf_tree_nth (pred d) il' blt'1
+  | 1 :: il', BinaryLeafTreeInternalNode _ blt'2 => complete_binary_leaf_tree_nth (pred d) il' blt'2
+  | _, _ => None
   end.
 
 Section Example.
@@ -95,46 +80,25 @@ Compute
 End Example.
 
 Fixpoint complete_binary_leaf_tree_update {A} d il x (blt : binary_leaf_tree A) : option (binary_leaf_tree A) :=
-  match d with
-  | 0 =>
-    Some (BinaryLeafTreeLeaf x)
-  | S d' =>
-    match il with
-    | [] => None
-    | i :: il' =>
-      match blt with
-      | BinaryLeafTreeLeaf _ => None
-      | BinaryLeafTreeInternalNode blt'1 blt'2 =>
-        match i with
-        | 0 =>
-          option_map
-            (fun blt'1_0 => BinaryLeafTreeInternalNode blt'1_0 blt'2)
-            (complete_binary_leaf_tree_update d' il' x blt'1)
-        | 1 =>
-          option_map
-            (fun blt'2_0 => BinaryLeafTreeInternalNode blt'1 blt'2_0)
-            (complete_binary_leaf_tree_update d' il' x blt'2)
-        | _ => None
-        end
-      end
-    end
+  match il, blt with
+  | [], _ => Some (BinaryLeafTreeLeaf x)
+  | 0 :: il', BinaryLeafTreeInternalNode blt'1 blt'2 =>
+    option_map
+      (fun blt'1_0 => BinaryLeafTreeInternalNode blt'1_0 blt'2)
+      (complete_binary_leaf_tree_update (pred d) il' x blt'1)
+  | 1 :: il', BinaryLeafTreeInternalNode blt'1 blt'2 =>
+    option_map
+      (fun blt'2_0 => BinaryLeafTreeInternalNode blt'1 blt'2_0)
+      (complete_binary_leaf_tree_update (pred d) il' x blt'2)
+  | _, _ => None
   end.
 
-Fixpoint complete_binary_leaf_tree_pop {A} d (blt : binary_leaf_tree A) : option (digital_list A * A) :=
-  match d with
-  | 0 =>
-    match blt with
-    | BinaryLeafTreeLeaf x => Some (DigitalListNil, x)
-    | BinaryLeafTreeInternalNode _ _ => None
-    end
-  | S d' =>
-    match blt with
-    | BinaryLeafTreeLeaf _ => None
-    | BinaryLeafTreeInternalNode blt'1 blt'2 =>
-      option_map
-        (fun '(dl', x) => (DigitalListCons (Some blt'1) dl', x))
-        (complete_binary_leaf_tree_pop d' blt'2)
-    end
+Fixpoint complete_binary_leaf_tree_pop {A} d (blt : binary_leaf_tree A) : digital_list A * A :=
+  match blt with
+  | BinaryLeafTreeLeaf x => (DigitalListNil, x)
+  | BinaryLeafTreeInternalNode blt'1 blt'2 =>
+    let '(dl', x) := complete_binary_leaf_tree_pop (pred d) blt'2 in
+      (DigitalListCons (Some blt'1) dl', x)
   end.
 
 Definition digital_list_empty {A} : digital_list A := DigitalListNil.
@@ -142,24 +106,12 @@ Definition digital_list_empty {A} : digital_list A := DigitalListNil.
 Definition concrete_digital_list_empty {A} : concrete_digital_list A :=
   ConcreteDigitalList 0 digital_list_empty.
 
-Fixpoint digital_list_nth_inner {A} d il (dl : digital_list A) {struct dl} : option A :=
-  match dl with
-  | DigitalListNil =>
-    None
-  | DigitalListCons o dl' =>
-    match il with
-    | [] => None
-    | i :: il' =>
-      match o with
-      | None => digital_list_nth_inner (pred d) il' dl'
-      | Some blt =>
-        match i with
-        | 0 => complete_binary_leaf_tree_nth (pred d) il' blt
-        | 1 => digital_list_nth_inner (pred d) il' dl'
-        | _ => None
-        end
-      end
-    end
+Fixpoint digital_list_nth_inner {A} d il (dl : digital_list A) : option A :=
+  match il, dl with
+  | 0 :: il', DigitalListCons None dl'
+  | 1 :: il', DigitalListCons (Some _) dl' => digital_list_nth_inner (pred d) il' dl'
+  | 0 :: il', DigitalListCons (Some blt) dl' => complete_binary_leaf_tree_nth (pred d) il' blt
+  | _, _ => None
   end.
 
 Definition digital_list_nth {A} d i (dl : digital_list A) : option A :=
@@ -170,31 +122,17 @@ Definition digital_list_nth {A} d i (dl : digital_list A) : option A :=
 Definition concrete_digital_list_nth {A} i (cdl : concrete_digital_list A) : option A :=
   let '(ConcreteDigitalList d dl) := cdl in digital_list_nth d i dl.
 
-Fixpoint digital_list_update_inner {A} d il x (dl : digital_list A) {struct dl} : option (digital_list A) :=
-  match dl with
-  | DigitalListNil =>
-    None
-  | DigitalListCons o dl' =>
-    match il with
-    | [] => None
-    | i :: il' =>
-      match o with
-      | None =>
-        option_map
-          (DigitalListCons o)
-          (digital_list_update_inner (pred d) il' x dl')
-      | Some blt =>
-        match i with
-        | 0 =>
-          Some (DigitalListCons (complete_binary_leaf_tree_update (pred d) il' x blt) dl')
-        | 1 =>
-          option_map
-            (DigitalListCons o)
-            (digital_list_update_inner (pred d) il' x dl')
-        | _ => None
-        end
-      end
-    end
+Fixpoint digital_list_update_inner {A} d il x (dl : digital_list A) :
+  option (digital_list A) :=
+  match il, dl with
+  | 0 :: il', DigitalListCons (None as o) dl'
+  | 1 :: il', DigitalListCons (Some _ as o) dl' =>
+    option_map
+      (DigitalListCons o)
+      (digital_list_update_inner (pred d) il' x dl')
+  | 0 :: il', DigitalListCons (Some blt) dl' =>
+    Some (DigitalListCons (complete_binary_leaf_tree_update (pred d) il' x blt) dl')
+  | _, _ => None
   end.
 
 Definition digital_list_update {A} d i x (dl : digital_list A) : option (digital_list A) :=
@@ -207,10 +145,9 @@ Definition concrete_digital_list_update {A} i x (cdl : concrete_digital_list A) 
   let '(ConcreteDigitalList d dl) := cdl in
     option_map (ConcreteDigitalList d) (digital_list_update d i x dl).
 
-Fixpoint digital_list_push {A} d (x : A) (dl : digital_list A) : option (binary_leaf_tree A) * (digital_list A) :=
+Fixpoint digital_list_push {A} d x (dl : digital_list A) : option (binary_leaf_tree A) * (digital_list A) :=
   match dl with
-  | DigitalListNil =>
-    (Some (BinaryLeafTreeLeaf x), DigitalListNil)
+  | DigitalListNil => (Some (BinaryLeafTreeLeaf x), DigitalListNil)
   | DigitalListCons o dl' =>
     match digital_list_push (pred d) x dl' with
     | (None, dl'0) => (None, DigitalListCons o dl'0)
@@ -235,11 +172,10 @@ Fixpoint digital_list_pop {A} d (dl : digital_list A) : option (digital_list A *
   | DigitalListCons o dl' =>
     match digital_list_pop (pred d) dl' with
     | None =>
-      option_flat_map
+      option_map
         (fun blt =>
-          option_map
-            (fun '(dl'0, x) => (DigitalListCons None dl'0, x))
-            (complete_binary_leaf_tree_pop (pred d) blt)
+          let '(dl'0, x) := complete_binary_leaf_tree_pop (pred d) blt in
+            (DigitalListCons None dl'0, x)
         )
         o
     | Some (dl'0, x) => Some (DigitalListCons o dl'0, x)

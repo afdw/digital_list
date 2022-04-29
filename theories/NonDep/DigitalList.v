@@ -696,7 +696,7 @@ Proof.
   apply digital_list_update_good; auto.
 Qed.
 
-Fixpoint digital_list_push {A} r d (x : A) (dl : digital_list A) : option (leaf_tree A) * (digital_list A) :=
+Fixpoint digital_list_push {A} r d x (dl : digital_list A) : option (leaf_tree A) * (digital_list A) :=
   match dl with
   | DigitalListNil =>
     (Some (LeafTreeLeaf x), DigitalListNil)
