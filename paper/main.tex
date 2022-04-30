@@ -1208,30 +1208,30 @@ Theorem concrete_digital_list_push_good :
 Now we can extract what we got into OCaml, mapping functions used to standard ones where possible. For example, here is how extracted arrays (in the dependent version) are implemented as functional arrays, using normal array type of OCaml; as an array is never actually constructed or destructed directly, we can write \coqinline{assert false} in these implementations:
 
 \begin{coq}
-Extract Inductive array => "array" [ "(assert false)" ] "(assert false)".
-Extract Constant array_to_list => "fun _ a -> Array.to_list a".
-Extract Inlined Constant array_empty => "[||]".
-Extract Constant array_single => "fun x -> [|x|]".
-Extract Constant array_nth => "
+Extract Inductive array => ``array'' [ ``(assert false)'' ] ``(assert false)''.
+Extract Constant array_to_list => ``fun _ a -> Array.to_list a''.
+Extract Inlined Constant array_empty => ``[||]''.
+Extract Constant array_single => ``fun x -> [|x|]''.
+Extract Constant array_nth => ``
   fun _ i a ->
     try Some a.(i)
     with Invalid_argument _ -> None
-".
-Extract Constant array_update => "
+''.
+Extract Constant array_update => ``
   fun _ i x a ->
     let a0 = Array.copy a in
     try
       a0.(i) <- x;
       Some a0
     with Invalid_argument _ -> None
-".
-Extract Constant array_push => "
+''.
+Extract Constant array_push => ``
   fun n x a ->
     let a0 = Array.make (n + 1) x in
     Array.blit a 0 a0 0 n;
     a0
-".
-Extract Constant array_pop => "fun n a -> (Array.sub a 0 n, a.(n))".
+''.
+Extract Constant array_pop => ``fun n a -> (Array.sub a 0 n, a.(n))''.
 \end{coq}
 
 For the dependent and the non-dependent version, we get functions of the same types, so we can put them in a module:
@@ -1259,6 +1259,8 @@ let time l =
   flush stdout;
   v
 
+let measure_size x = (Marshal.to_bytes x [] |> Bytes.length |> float_of_int) /. 1024.0 /. 1024.0
+
 module Example = functor (Dl : Digital_list.DIGITAL_LIST) -> struct
   open Dl
 
@@ -1276,8 +1278,8 @@ module Example = functor (Dl : Digital_list.DIGITAL_LIST) -> struct
       for i = 0 to (!cdl |> concrete_digital_list_length r) - 1 do
         a.(i) <- !cdl |> concrete_digital_list_nth r i |> Option.get
       done;
-      Printf.printf "Raw data size (after serialization): %f MiB\n" ((Marshal.to_bytes a [] |> Bytes.length |> float_of_int) /. 1024.0 /. 1024.0);
-      Printf.printf "Data structure size (after serialization): %f MiB\n" ((Marshal.to_bytes !cdl [] |> Bytes.length |> float_of_int) /. 1024.0 /. 1024.0)
+      Printf.printf "Raw data size (after serialization): %f MiB\n" (a |> measure_size);
+      Printf.printf "Data structure size (after serialization): %f MiB\n" (cdl |> measure_size)
     ))
 end
 

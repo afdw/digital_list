@@ -23,7 +23,7 @@ Definition, Ltac, Fixpoint, CoFixpoint, Add, Morphism, Relation,
 Implicit, Arguments, Set, Unset, Contextual, Strict, Prenex, Implicits,
 Inductive, Check, CoInductive, Structure, Canonical, Coercion,
 Context, Class, Global, Instance, Program, Infix,
-Theorem, Lemma, Corollary, Proposition, Fact, Remark, Example,
+Theorem, Lemma, Corollary, Proposition, Fact, Remark, %Example,
 Proof, Goal, Save, Qed, Defined, Hint, Resolve, Rewrite, View,
 Search, Show, Print, Printing, All, Graph, Projections, inside, outside,
 Extract, Inlined, Constant},
@@ -31,7 +31,8 @@ Extract, Inlined, Constant},
 % Gallina
 morekeywords=[2]{forall, exists, exists2, fun, fix, cofix, struct,
       match, with, end, as, in, return, let, if, is, then, else,
-      for, of, nosimpl, when},
+      for, of, nosimpl, when,
+      to, do, sig, module, type, function, lazy, val, done, open, assert, try},
 %
 % Sorts
 morekeywords=[3]{Type, Prop, Set},
@@ -145,7 +146,7 @@ keywordstyle=[5]{\ttfamily\color{dkred}},
 %Style for iterators
 %keywordstyle=[6]{\ttfamily\color{dkpink}},
 % Style for strings
-stringstyle=\ttfamily,
+stringstyle={\ttfamily\color{purple}},
 % Style for comments
 commentstyle={\ttfamily\color{dkgreen}},
 %
@@ -239,6 +240,9 @@ literate=
     {\\\{x\}}{{$\OSsng{\texttt{x}}$\,}}1
     {\\pi}{{$\pi$\,}}1
     {'}{{$^\prime$}}1
+    {``}{{``}}1
+    {''}{{''}}1
+    {|>}{{$\vartriangleright$ }}1
 %
 }[keywords,comments,strings]
 
