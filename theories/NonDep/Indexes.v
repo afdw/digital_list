@@ -43,7 +43,7 @@ Proof.
   intros ? ? ?. unfold indexes_list_of_index. rewrite List.rev_length. apply pad_list_length.
 Qed.
 
-Lemma indexes_list_to_index_list_rev_cons :
+Lemma indexes_list_to_indexes_list_rev_cons :
   forall r d i il,
   length il = d ->
   indexes_list_to_index r (S d) (List.rev (i :: il)) =
@@ -65,13 +65,13 @@ Proof.
       * rewrite List.app_length in H. simpl in H. lia.
 Qed.
 
-Lemma indexes_list_to_index_list_rev_list_repeat_0 :
+Lemma indexes_list_to_indexes_list_rev_list_repeat_0 :
   forall r d,
   indexes_list_to_index r d (List.rev (List.repeat 0 d)) = 0.
 Proof.
   intros ? ?. induction d.
   - auto.
-  - simpl List.repeat. rewrite indexes_list_to_index_list_rev_cons.
+  - simpl List.repeat. rewrite indexes_list_to_indexes_list_rev_cons.
     + lia.
     + apply List.repeat_length.
 Qed.
@@ -86,8 +86,8 @@ Proof.
   - simpl in H0. destruct i; try lia. rewrite to_digits_red_any_zero. simpl. auto.
   - destruct (PeanoNat.Nat.eqb_spec i 0).
     + clear IHd. subst i. rewrite to_digits_red_any_zero. simpl pad_list.
-      rewrite indexes_list_to_index_list_rev_cons.
-      * rewrite indexes_list_to_index_list_rev_list_repeat_0. auto.
+      rewrite indexes_list_to_indexes_list_rev_cons.
+      * rewrite indexes_list_to_indexes_list_rev_list_repeat_0. auto.
       * apply List.repeat_length.
     + assert (Nat.div i r < Nat.pow r d). {
         simpl in H0. destruct (PeanoNat.Nat.eqb_spec (Nat.div i r) (Nat.pow r d)).
@@ -96,7 +96,7 @@ Proof.
           rewrite PeanoNat.Nat.mul_comm in H0. rewrite PeanoNat.Nat.div_mul in H0; try lia.
       }
       specialize (IHd (Nat.div i r) H1); clear H1. rewrite to_digits_red_any_nonzero; try lia.
-      simpl pad_list. rewrite indexes_list_to_index_list_rev_cons.
+      simpl pad_list. rewrite indexes_list_to_indexes_list_rev_cons.
       * rewrite IHd; clear IHd. symmetry. rewrite PeanoNat.Nat.mul_comm. apply PeanoNat.Nat.div_mod_eq.
       * apply pad_list_length.
 Qed.

@@ -166,7 +166,7 @@
 \newcommand{\xbraces}[1]{\scalerel[1.5ex]{\lxbrace}{#1}\scalerel*[1.5ex]{\rxbrace}{#1}}
 \newcommand{\nospaceevaluatesto}[0]{\scaleobj{1.5}{\leadsto}}
 \newcommand{\evaluatesto}[0]{\:\nospaceevaluatesto\:}
-\title{Implementation and verification of a data structure using dependent types}
+\title{Implementation and verification of\protect\\a data structure using dependent types}
 \author{Anton Danilkin}
 \begin{document}
 
@@ -180,13 +180,13 @@
     \end{minipage}
 \end{no_space_center}
 
-\vspace{2cm}
+\vspace{2cm}% bad
 
 \section{Introduction}
 
-One of the most important data structures in functional programming are singly linked lists, which support prepending an element in the beginning, as well as destructing a non-empty list into its head (the first element) and tail (the list containing the rest of elements). Conversely, arrays are frequently used in imperative programming; they support getting and setting an element by its index, as well as, in case of vectors, dynamic resizing.
+One of the most important data structures in functional programming are singly linked lists, which support prepending an element in the beginning, as well as destructing a non-empty list into its head (the first element) and tail (the list containing the rest of the elements). Conversely, arrays are frequently used in imperative programming; they support getting and setting an element by its index, as well as, in the case of vectors, dynamic resizing.
 
-The problem of lists is that the operation of retrieving or updating an element at a specific index has linear spacial complexity in term of the size. On the flip side, operations on arrays and vectors mutate the instance they work on, which not only makes reasoning about program behavior harder, but also means that older versions of the data structure become unaccessible for future use. One way to fix that would be making a copy before each operation, but that again would mean that everything would have linear complexity.
+The problem with lists is that the operation of retrieving or updating an element of a list at a specific index has linear spacial complexity in terms of its size. On the flip side, operations on arrays and vectors mutate the instance they work on, which not only makes reasoning about program behavior harder, but also means that older versions of the data structure become inaccessible for future use. One way to fix that would be to make a copy before each operation, but that again would mean that everything would have linear complexity.
 
 For these reasons, the following question arises: is it possible to design a data structure that combines the benefits of singly linked lists and vectors?
 
@@ -239,7 +239,7 @@ Fixpoint app {A} (l1 l2 : list A) : list A :=
     \end{tabular}
 \end{no_padding_center}
 
-As remarked by Chris Okasaki \cite{okasaki_1998}, there is a clear resemblance between them: the only real difference is that \coqinline{list A} holds a datum of type \coqinline{A}, where as \coqinline{nat} does not. Here is how the list \coqinline{[7; 5; 8]} and the number 3 (which is the length of the list) could be represented:
+As remarked by Chris Okasaki \cite{okasaki_1998}, there is a clear resemblance between them: the only real difference is that \coqinline{list A} holds a datum of type \coqinline{A}, whereas \coqinline{nat} does not. Here is how the list \coqinline{[7; 5; 8]} and the number 3 (which is the length of the list) could be represented:
 
 \begin{center}
     \begin{tikzpicture}
@@ -315,9 +315,9 @@ Fixpoint repeat {A} (x : A) (n : nat) : list A :=
 
 As there are many ways to represent natural numbers (and not only the unary system that was considered above). Depending on which representation we chose, operations on the numbers (such as increment, decrement, sum, converting into other representations) will have different efficiency, and in each case we can find an analogous data structure.
 
-So another simple representation of natural numbers is the binary numeral system. As seen, again, by Chris Okasaki \cite{okasaki_1998}, we can augment it to contain pieces of data by complete binary leaf trees in each digit of the number (although here we will use big-endian digit ordering instead of little-endian).
+So another simple representation of natural numbers is the binary numeral system. As seen, again, by Chris Okasaki \cite{okasaki_1998}, we can augment it to contain pieces of data by storing a complete binary leaf trees (or nothing) in each digit of the number (although here we will use big-endian digit ordering instead of little-endian).
 
-For the following, we will denote by \coqinline{A} some data type (in examples in will be \coqinline{nat}). A ``complete binary leaf tree'' of depth $d$ has $2^d$ leaves where it stores values of type \coqinline{A} (``complete binary'' meaning that each internal node has exactly 2 children, ``leaf'' meaning that data is only stores in the leaves).
+For the following, we will denote by \coqinline{A} some data type (in examples it will be \coqinline{nat}). A ``complete binary leaf tree'' of depth $d$ has $2^d$ leaves where it stores values of type \coqinline{A} (``complete binary'' meaning that each internal node has exactly 2 children, ``leaf'' meaning that data is only stored in the leaves).
 
 \begin{coq}
 Inductive binary_leaf_tree {A} :=
@@ -417,7 +417,7 @@ Here is an example of a digit list for $n = 5$, so we can chose $d = 3$ (the min
     \end{tikzpicture}
 \end{center}
 
-Or, to simplify the drawing, the following notation will be used form now on:
+Or, to simplify the drawing, the following notation will be used from now on:
 
 \begin{center}
     $\xbraces{
@@ -452,11 +452,11 @@ The following concrete digital list corresponds to the digital list given above:
     \end{tikzpicture}
 \end{center}
 
-Next we will consider operations that we can do with these types. We will first define each operation on binary leaf trees, then lift it to digital lists (always having a ``depth'' argument, which corresponds to the depth of the digital list passed, for consistency and for reasons outlined later, even when it is not actually used), and finally to concrete digital lists.
+Next, we will consider operations that we can do with these types. We will first define each operation on binary leaf trees, then lift it to digital lists (always having a ``depth'' argument, which corresponds to the depth of the digital list passed, for consistency and for reasons outlined later, even when it is not actually used), and finally to concrete digital lists.
 
 \subsection{Interpretation}
 
-The first operation will be conversion to a simple list, which at the same times gives an ``interpretation'' of the data structures, allowing us to establish a convection between the operations on them and ones on the regular lists, which means proving the correctness of these operations.
+The first operation will be conversion to a simple list, which at the same time gives an ``interpretation'' of the data structures, allowing us to establish a connection between the operations on them and ones on the regular lists, which means proving the correctness of these operations.
 
 To convert a binary leaf tree to a list, we just traverse its leaves in their natural order. For example:
 
@@ -544,9 +544,9 @@ Definition concrete_digital_list_length {A} (cdl : concrete_digital_list A) :=
 
 \subsection{Getting an element by its index}
 
-The operation of getting the \coqinline{i}th element is a bit more involved. In all cases, we first convert \coqinline{i} to list of its binary digits, called \coqinline{il} (it has the same length as the depth of the data structure we work with).
+The operation of getting the \coqinline{i}th element is a bit more involved. In all cases, we first convert \coqinline{i} to the list of its binary digits, called \coqinline{il} (it has the same length as the depth of the data structure we work with).
 
-Then all we need to do for a complete binary leaf tree is to descent it, starting from the root, taking the left branch if the digit in current position is $0$ and the right one if the digit in current position is $1$. For example, suppose we want to get the $6$'th element of the following tree; for that we first convert it to digits (\coqinline{to_digits 3 6 ~> [1; 1; 0]}, where $3$ is the depth of the tree), and then visit the tree as described (the path is highlighted in red):
+Then all we need to do for a complete binary leaf tree is to descend it, starting from the root, taking the left branch if the digit in the current position is $0$ and the right one if the digit in the current position is $1$. For example, suppose we want to get the $6$'th element of the following tree; for that we first convert it to digits (\coqinline{to_digits 3 6 ~> [1; 1; 0]}, where $3$ is the depth of the tree), and then visit the tree as described (the path is highlighted in red):
 
 \begin{center}
     \coqinline{complete_binary_leaf_tree_nth 3 [1; 1; 0]}
@@ -602,7 +602,7 @@ Then all we need to do for a complete binary leaf tree is to descent it, startin
     \coqinline{~> 6}
 \end{center}
 
-In this case we suppose that all arguments are valid, but we still have to return option, as we need to return something in all cases.
+In this case we suppose that all arguments are valid, but we still have to return an option, as we need to return something in all cases.
 
 \begin{coq}
 Fixpoint complete_binary_leaf_tree_nth {A} d il (blt : binary_leaf_tree A) : option A :=
@@ -649,7 +649,7 @@ To see how to extract the \coqinline{i}th element, we need to know in which it i
     \end{tabular}
 \end{center}
 
-The crucial observation here is that the tree index is the index of the first digit in \coqinline{i} that is less than the corresponding digit of \coqinline{n}, and the index in the tree is just the rest of digits of \coqinline{i}.
+The crucial observation here is that the tree index is the index of the first digit in \coqinline{i} that is strictly less than the corresponding digit of \coqinline{n}, and the index in the tree is just the rest of digits of \coqinline{i}.
 
 So in the case $i_{d - 1} = n_{d - 1} = 0$ (that is, \coqinline{il} starts with 0 and there is no tree in this position) and in the case $i_{d - 1} = n_{d - 1} = 1$ (that is, \coqinline{il} starts with 1 and there is a tree in this position), we recurse to our tail. Otherwise, in the case $i_{d - 1} = 0$ and $n_{d - 1} = 1$ (that is, \coqinline{il} starts with 0 and there is a tree in this position), we ask this tree for its element at position defined by \coqinline{il'}. The case $i_{d - 1} = 1$ and $n_{d - 1} = 0$ is impossible on valid input. \pagebreak% bad
 
@@ -663,7 +663,7 @@ Fixpoint digital_list_nth_inner {A} d il (dl : digital_list A) : option A :=
   end.
 \end{coq}
 
-All that is left now is to check whether \coqinline{i} is in bounds (to get a function that works on all \coqinline{i}) and to convert it into digits.
+All that is left now is to check whether \coqinline{i} is in bounds (to get a function that works forall all \coqinline{i : nat}) and to convert it into digits.
 
 \begin{coq}
 Definition digital_list_nth {A} d i (dl : digital_list A) : option A :=
@@ -722,7 +722,7 @@ Definition concrete_digital_list_update {A} i x (cdl : concrete_digital_list A) 
 
 Adding an element \coqinline{x : A} to the end of a digital list of depth \coqinline{d} can potentially produce a carry (a complete binary leaf tree of depth \coqinline{d}) and always gives a digital list of the same depth \coqinline{d}.
 
-If the initial digital list is of depth $0$, we output a carry with the element $x$. For example:
+If the initial digital list is of depth $0$, we output a carry with the element \coqinline{x}. For example:
 
 \begin{center}
     \coqinline{digital_list_push 0 8}
@@ -981,7 +981,7 @@ Definition concrete_digital_list_pop {A} (cdl : concrete_digital_list A) :
 
 \section{\texttt{r}-ary dependent version}
 
-So far we have only defined functions, but did not prove them correct. But that will be complicated by the fact that our data structures can have invalid values. For example, this is representable and has type \coqinline{concrete_digital_list nat}:
+So far we have only defined functions, but did not proven them correct. But that will be complicated by the fact that our data structures can have invalid values. For example, this is representable and has type \coqinline{concrete_digital_list nat}:
 
 \begin{center}
     \begin{tikzpicture}
@@ -1013,7 +1013,7 @@ So far we have only defined functions, but did not prove them correct. But that 
     \end{tikzpicture}
 \end{center}
 
-To fix that, we could just define predicates that asserts that the data structure are valid, and that option was also tried. But here we will explore another way to achieve what we want: dependent types, which allows to store proofs of data structure invariants inside data structures themselves.
+To fix that, we could just define predicates that assert that the data structures are valid, and that option was also tried. But here we will explore another way to achieve what we want: dependent types, which allow to store proofs of data structure invariants inside data structures themselves.
 
 One example is a ``sized list'', which is a type of lists that are guaranteed to have the length given in their type.
 
@@ -1033,11 +1033,11 @@ Notation "[| x ; y ; .. ; z |]" := (SizedListCons x (SizedListCons y .. (SizedLi
 
 For example, \coqinline{[|1; 2; 3|] : sized_list nat 3}.
 
-But there is another problem, that of efficiency. Storing binary trees means that a lot of memory is waisted on pointer, which also take time to access. To solve this, we can store not binary trees, but \coqinline{r}-ary trees. We call this \coqinline{r} (a natural number greater than one) the ``radix'' of the data structure. Everything we have seen so far generalizes naturally to any such radix, and not just $2$.
+But there is another problem, that of efficiency. Storing binary trees means that a lot of memory is wasted on pointers, which also take time to access. To solve this, we can store not binary trees, but \coqinline{r}-ary trees. We call this \coqinline{r} (a natural number greater than one) the ``radix'' of the data structure. Everything we have seen so far generalizes naturally to any such radix, and not just $2$.
 
-We will use \coqinline{r}-ary complete trees instead of binary complete trees. Also we will store between $0$ and \coqinline{r - 1} of these trees in each position of a digital tree, and not $0$ or $1$ as before (represented by the \coqinline{option} type).
+We will use \coqinline{r}-ary complete trees instead of binary complete trees. Also, we will store between $0$ and \coqinline{r - 1} of these trees in each position of a digital tree, and not $0$ or $1$ as before (represented by the \coqinline{option} type).
 
-To store something repeated number of times, we need (functional) arrays. To model them in Coq, we will just create a wrapper around sized lists and define some operations on it that forward to ones on sized lists. But we will assume this knowledge of internal representation only in proofs, and in computation contents we will only use the operations defined directly on arrays.
+To store something repeated number of times, we need (functional) arrays. To model them in Coq, we will just create a wrapper around sized lists and define some operations on it that forward to ones on sized lists. But we will assume this knowledge of internal representation only in proofs, and in computational contents we will only use the operations defined directly on arrays.
 
 \begin{coq}
 Inductive array {A n} :=
@@ -1046,7 +1046,7 @@ Inductive array {A n} :=
 Arguments array : clear implicits.
 \end{coq}
 
-The definition of the type of a complete leaf tree is actually a function that computes the type consisting of nested array of given radix and depth.
+The definition of the type of a complete leaf tree is actually a function that computes the type consisting of nested arrays of given radix and depth.
 
 \begin{coq}
 Fixpoint complete_leaf_tree A r d :=
@@ -1107,7 +1107,28 @@ Check concrete_digital_list_pop : forall {A} {r}, concrete_digital_list A r ->
   option (concrete_digital_list A r * A).
 \end{coq} \pagebreak% bad
 
-And then we show their correctness by proving that they perform the same operations as ones on corresponding regular lists. Here are the theorem statements about concrete digital lists:
+And here is an example of how implementation of an operation can look like:
+
+\begin{coq}
+Fixpoint digital_list_nth_inner {A r d} (isl : sized_list nat d) (dl : digital_list A r d)
+  {struct dl} : option A :=
+  match dl with
+  | DigitalListNil => fun (isl : sized_list nat 0) =>
+    None
+  | @DigitalListCons _ _ d' k _ a dl' => fun (isl : sized_list nat (S d')) =>
+    match isl with
+    | @SizedListCons _ d'0 i isl'0 => fun (Heqd : S d'0 = S d') =>
+      let isl' := rew (eq_add_S _ _ Heqd) in isl'0 in
+      if Nat.eqb i k
+      then digital_list_nth_inner isl' dl'
+      else option_flat_map (complete_leaf_tree_nth isl') (array_nth i a)
+    end eq_refl
+  end isl.
+\end{coq}
+
+As can be seen, some work in necessary to obtain and use all of the equalities needed to analyze cases and to issue recursive calls with correct types. Here we can see why the \coqinline{d} argument is indispensable with dependent types.
+
+Then we show correctness of the operations by proving that they perform the same operations as ones on corresponding regular lists. Here are the theorem statements about concrete digital lists:
 
 \begin{coq}
 Theorem concrete_digital_list_empty_correct :
@@ -1145,7 +1166,7 @@ Theorem concrete_digital_list_pop_correct :
 
 \section{\texttt{r}-ary non-dependent version}
 
-But we can nonetheless make a non-dependent version to be able to compare it the dependent one. Here we base arrays on regular lists and not on sized lists.
+But we can nonetheless make a non-dependent version to be able to compare it to the dependent one. Here we base arrays on regular lists and not on sized lists.
 
 \begin{coq}
 Inductive array {A} :=
@@ -1154,7 +1175,7 @@ Inductive array {A} :=
 Arguments array : clear implicits.
 \end{coq}
 
-And here is how we define complete leaf trees, digital lists and concrete digital lists, as well as predicated of their validity:
+And here is how we define complete leaf trees, digital lists and concrete digital lists, as well as predicates of their validity:
 
 \begin{coq}
 Inductive leaf_tree {A} :=
@@ -1170,9 +1191,7 @@ Inductive leaf_tree_complete {A} r : nat -> leaf_tree A -> Prop :=
       array_length a = r ->
       List.Forall (leaf_tree_complete r d) (array_to_list a) ->
       leaf_tree_complete r (S d) (LeafTreeInternalNode a).
-\end{coq}
-\pagebreak% bad
-\begin{coq}
+
 Inductive digital_list {A} :=
   | DigitalListNil : digital_list
   | DigitalListCons : array (leaf_tree A) -> digital_list -> digital_list.
@@ -1213,13 +1232,16 @@ Theorem concrete_digital_list_push_good :
 
 \section{Extraction}
 
-Now we can extract what we got into OCaml, mapping functions used to standard ones where possible. For example, here is how extracted arrays (in the dependent version) are implemented as functional arrays, using normal array type of OCaml; as an array is never actually constructed or destructed directly, we can write \coqinline{assert false} in these implementations:
+Now we can extract what we got into OCaml, mapping functions used to standard ones where possible. For example, here is how extracted arrays (in the dependent version) are implemented as functional arrays, using the normal array type of OCaml; as an array is never actually constructed or destructed directly, we can write \coqinline{assert false} in these implementations:
 
 \begin{coq}
 Extract Inductive array => ``array'' [ ``(assert false)'' ] ``(assert false)''.
 Extract Constant array_to_list => ``fun _ a -> Array.to_list a''.
 Extract Inlined Constant array_empty => ``[||]''.
 Extract Constant array_single => ``fun x -> [|x|]''.
+\end{coq}
+\pagebreak% bad
+\begin{coq}
 Extract Constant array_nth => ``
   fun _ i a ->
     try Some a.(i)
@@ -1233,9 +1255,6 @@ Extract Constant array_update => ``
       Some a0
     with Invalid_argument _ -> None
 ''.
-\end{coq}
-\pagebreak% bad
-\begin{coq}
 Extract Constant array_push => ``
   fun n x a ->
     let a0 = Array.make (n + 1) x in
@@ -1317,9 +1336,9 @@ Data structure size (after serialization): 25.493868 MiB
 Execution time: 11.857548s
 \end{coq}
 
-Even thought this way of measuring data structure size is very crude, we can still the the extraction of the dependent version works faster and uses less memory than the non-dependent one. The reason is that the non-dependent version needs more indirections when storing leaf trees, which are bad for performance and memory footprint.
+Even though this way of measuring data structure size is very crude, we can still note that the extraction of the dependent version works faster and uses less memory than the non-dependent one. The reason is that the non-dependent version needs more indirections when storing leaf trees, which are bad for performance and for memory footprint.
 
-An interesting remark is that the extraction of the dependent version contains some unsafe casts (\coqinline{Obj.magic}), as otherwise the polymorphic recursion used would be hard or impossible to do in OCaml directly. But that is fine, because we have proved that everything is correct at the time of defining terms (as they type check, by correctness of extraction the end result should not perform any wrong casts). And otherwise, by writing OCaml code directly, will would not have such guarantees, meaning that there can be unexpected bugs or even security vulnerabilities if \coqinline{Obj.magic} was used wrongly.
+An interesting remark is that the extraction of the dependent version contains some unsafe casts (\coqinline{Obj.magic}), as otherwise the polymorphic recursion used would be hard or impossible to do in OCaml directly. But that is fine, because we have proven that everything is correct at the time of defining terms (as they type check, by correctness of extraction the end result should not perform any wrong casts). And otherwise, by writing OCaml code directly, we would not have such guarantees, meaning that there can be unexpected bugs or even security vulnerabilities if \coqinline{Obj.magic} was used wrongly.
 
 For the choice of \coqinline{r}, here is how much time executing the code above (but with $1000000$ as digital lists length) for the dependent version takes for different values of \coqinline{r} (logarithmic scale):
 
@@ -1331,13 +1350,13 @@ For the choice of \coqinline{r}, here is how much time executing the code above 
     \end{tikzpicture}
 \end{center}
 
-We can see that the optimal radix in this particular size is around $32$. We can also remark that the binary case is many times slower, and so generalizing the data structure to different radixes can actually be useful for some scenarios.
+We can see that the optimal radix in this particular case is around $32$. We can also remark that the binary case is many times slower, and so generalizing the data structure to different radixes can actually be useful for some scenarios.
 
 \section{Methodology}
 
-First, the \coqinline{r}-ary dependent version was done, from it the the \coqinline{r}-ary non-dependent one was obtained, and finally it was specialized for \coqinline{r = 2} to get the binary non-dependent version.
+First, the \coqinline{r}-ary dependent version was done, from it the \coqinline{r}-ary non-dependent one was obtained, and finally it was specialized to \coqinline{r = 2} to get the binary non-dependent version.
 
-Using dependent types means that the functions that performs operations have to be decorated with proofs, but that is, in some sense, a good thing: this catches a lot of mistakes (as it limits what it possible to write, it is harder to constructed wrong expressions); it took some time to construct the terms of the functions, but the first time it type checked, it was already correct.
+Using dependent types means that the functions that perform operations have to be decorated with proofs, but that is, in some sense, a good thing: this catches a lot of mistakes (as it limits what it is possible to write, it is harder to construct wrong expressions); it took some time to construct the terms of the functions, but the first time it type checked, it was already correct.
 
 Here are some statics on development sizes:
 
@@ -1353,7 +1372,7 @@ Here are some statics on development sizes:
     \end{tabular}
 \end{center}
 
-We can see that the non-dependent version turned out to be longed, but this maybe due to the fact that is was adapted from the dependent one and not done directly.
+We can see that the non-dependent version turned out to be longer, but this may be due to the fact that it was adapted from the dependent one and not done directly.
 
 The benefit of the non-dependent version is that the implementations of operations are more readable, because they are not cluttered with proofs.
 
@@ -1361,7 +1380,7 @@ The source code of the development is available at \url{https://github.com/afdw/
 
 \section{Related work}
 
-There are other developments similar to the one described here exists, notably proofs of binary random access lists \cite{cfml_binary_random_access_lists} and finger trees \cite{cfml_finger_trees} by Arthur Charguéraud. The notable difference is that the implementations are written in OCaml, and then they are extracted and proved in Coq using the CFML framework \cite{cfml}, where as this development was done in Coq and then extracted in OCaml (so in the opposite direction).
+There are other developments similar to the one described here exists, notably proofs of binary random access lists \cite{cfml_binary_random_access_lists} and finger trees \cite{cfml_finger_trees} by Arthur Charguéraud. The notable difference is that the implementations are written in OCaml, and then they are extracted and proved in Coq using the CFML framework \cite{cfml}, whereas this development was done in Coq and then extracted in OCaml (so in the opposite direction).
 
 There are other formalizations of data structures using dependent types, for example, again, finger trees in Coq by Matthieu Sozeau \cite{program_ing_finger_trees_in_coq}.
 
