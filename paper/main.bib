@@ -8,22 +8,39 @@
 }
 
 @misc{cfml,
-  author       = {Arthur Charguéraud},
-  howpublished = {\url{http://www.chargueraud.org/softs/cfml/}},
-  title        = {The CFML tool and library},
-  year         = {2016}
+  author = {Arthur Charguéraud},
+  url    = {http://www.chargueraud.org/softs/cfml/},
+  title  = {The CFML tool and library},
+  year   = {2016}
 }
 
 @misc{cfml_binary_random_access_lists,
-  author       = {Arthur Charguéraud},
-  howpublished = {\url{https://gitlab.inria.fr/charguer/cfml/-/blob/master/dev/okasaki/BinaryRandomAccessList_proof.v}},
-  title        = {Proof of binary random access lists in CFML},
-  year         = {2014}
+  author = {Arthur Charguéraud},
+  url    = {https://gitlab.inria.fr/charguer/cfml/-/blob/master/dev/okasaki/BinaryRandomAccessList_proof.v},
+  title  = {Proof of binary random access lists in CFML},
+  year   = {2014}
 }
 
 @misc{cfml_finger_trees,
-  author       = {Arthur Charguéraud},
-  howpublished = {\url{https://gitlab.inria.fr/charguer/cfml/-/blob/master/examples/FingerTree/FingerTree_proof.v}},
-  title        = {Proof of finger trees in CFML},
-  year         = {2015}
+  author = {Arthur Charguéraud},
+  url    = {https://gitlab.inria.fr/charguer/cfml/-/blob/master/examples/FingerTree/FingerTree_proof.v},
+  title  = {Proof of finger trees in CFML},
+  year   = {2015}
 }
+
+@inproceedings{program_ing_finger_trees_in_coq,
+  author    = {Sozeau, Matthieu},
+  title     = {Program-Ing Finger Trees in Coq},
+  year      = {2007},
+  isbn      = {9781595938152},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://sozeau.gitlabpages.inria.fr/www/research/publications/Program-ing_Finger_Trees_in_Coq.pdf},
+  doi       = {10.1145/1291151.1291156},
+  abstract  = {Finger Trees (Hinze & Paterson, 2006) are a general purpose persistent data structure with good performance. Their genericity permits developing a wealth of structures like ordered sequences or interval trees on top of a single implementation. However, the type systems used by current functional languages do not guarantee the coherent parameterization and specialization of Finger Trees, let alone the correctness of their implementation. We present a certified implementation of Finger Trees solving these problems using the Program extension of Coq. We not only implement the structure but also prove its invariants along the way, which permit building certified structures on top of Finger Trees in an elegant way.},
+  numpages  = {12},
+  keywords  = {finger trees, dependent types, Coq, certification},
+  location  = {Freiburg, Germany},
+  series    = {ICFP '07}
+}
+
